@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CIRO | NEXUS CONTROL</title>
+    <!-- Modern Font Stack -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+  <body class="nexus-theme">
+    
+    <!-- Background Elements -->
+    <div id="main-map"></div>
+    <div class="map-overlay-grid"></div>
+    <div class="radar-scan"></div>
+    <div class="vignette-overlay"></div>
+
+    <!-- HUD Overlay Layers -->
+    <div class="hud-layer">
+      <!-- Top Bar: Minimalist Cyberpunk -->
+      <header class="hud-header glass-panel fade-in-top">
+        <div class="header-left">
+          <div class="nexus-logo pulse-glow">
+            <i data-lucide="hexagon"></i>
+          </div>
+          <h1>CIRO <span class="neon-text">NEXUS</span></h1>
+        </div>
+        <div class="header-center">
+           <div class="target-reticle">
+             <span>SYS.CORE.v2</span>
+           </div>
+        </div>
+        <div class="header-right">
+          <div id="current-time" class="mono-text glow-text">00:00:00</div>
+          <div class="status-badge" id="status-badge-container">
+            <span class="dot green" id="status-dot"></span>
+            <span id="backend-status" class="mono-text">SYSTEM_NOMINAL</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="hud-body">
+        <!-- Left Panel: Controls -->
+        <aside class="panel left-panel glass-panel slide-in-left">
+          <div class="panel-inner">
+            <div class="panel-header">
+              <i data-lucide="terminal" class="neon-icon"></i>
+              <h2>COMMAND_INJECTION</h2>
+            </div>
+            
+            <div class="panel-section">
+              <div class="input-stack">
+                <div class="select-wrapper">
+                  <select id="signal-location" class="cyber-input">
+                    <option value="F-6 Markaz">SEC-01: F-6 MARKAZ</option>
+                    <option value="Blue Area">SEC-02: BLUE AREA</option>
+                    <option value="Saddar">SEC-03: SADDAR</option>
+                  </select>
+                </div>
+                <textarea id="signal-text" class="cyber-input textarea-cyber" placeholder="> Input raw telemetry sequence..."></textarea>
+                <button id="btn-send-signal" class="btn-cyber">
+                  <span class="btn-content">
+                    <i data-lucide="radio"></i> BROADCAST_SIGNAL
+                  </span>
+                  <div class="btn-glitch-layer"></div>
+                </button>
+              </div>
+            </div>
+
+            <div class="panel-section divider">
+              <div class="panel-header">
+                <i data-lucide="cpu" class="neon-icon"></i>
+                <h2>KERNEL_ACTIONS</h2>
+              </div>
+              <div class="btn-group-cyber">
+                <button id="btn-analyze" class="btn-cyber-primary" disabled>
+                  <span class="btn-content">
+                    <i data-lucide="scan-line"></i> RUN_ANALYSIS
+                  </span>
+                </button>
+                <button id="btn-reset" class="btn-cyber-ghost">
+                   <i data-lucide="rotate-ccw"></i> RESET
+                </button>
+              </div>
+            </div>
+
+            <div class="panel-section">
+              <div class="panel-header">
+                <i data-lucide="network" class="neon-icon"></i>
+                <h2>SWARM_COGNITION</h2>
+              </div>
+              <div class="data-streams">
+                <div class="stream-label">
+                  <span>DATA_THROUGHPUT</span>
+                  <span class="mono-text neon-text">98%</span>
+                </div>
+                <div class="health-bar"><div class="fill animate-width" style="width: 98%"></div></div>
+                
+                <div class="stream-label mt-2">
+                  <span>NEURAL_LOAD</span>
+                  <span class="mono-text neon-text" id="neural-load-val">45%</span>
+                </div>
+                <div class="health-bar"><div class="fill animate-width" id="neural-load-bar" style="width: 45%"></div></div>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <!-- Right Panel: Intelligence -->
+        <aside class="panel right-panel glass-panel slide-in-right">
+          <div class="panel-inner">
+             <div class="panel-header">
+              <i data-lucide="shield-alert" class="neon-icon"></i>
+              <h2>THREAT_INTELLIGENCE</h2>
+            </div>
+            <div id="crisis-display" class="intelligence-hud">
+              <div class="hud-empty glitch-anim">
+                <i data-lucide="shield-check"></i>
+                <p>NO_ACTIVE_THREATS</p>
+                <div class="scan-line-small"></div>
+              </div>
+            </div>
+            
+            <div class="panel-header mt-4">
+              <i data-lucide="activity" class="neon-icon"></i>
+              <h2>SYSTEM_PULSE</h2>
+            </div>
+            <div class="analytics-hud">
+              <canvas id="pulse-chart"></canvas>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <!-- Bottom Panel: Response Log -->
+      <footer class="bottom-panel glass-panel slide-in-bottom">
+        <div class="panel-inner log-flex">
+          <div class="log-column">
+             <div class="panel-header slim">
+              <i data-lucide="list-tree" class="neon-icon"></i>
+              <h2>RESPONSE_CHAIN</h2>
+            </div>
+            <div id="action-log" class="cyber-log">
+              <div class="log-empty mono-text">Awaiting directives...</div>
+            </div>
+          </div>
+          <div class="log-column divider-left">
+             <div class="panel-header slim">
+              <i data-lucide="terminal-square" class="neon-icon"></i>
+              <h2>KERNEL_AUDIT</h2>
+            </div>
+            <div id="system-audit" class="cyber-audit"></div>
+          </div>
+        </div>
+      </footer>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+    <script>
+      lucide.createIcons();
+    </script>
+  </body>
+</html>

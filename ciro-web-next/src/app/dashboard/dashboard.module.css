@@ -1,0 +1,768 @@
+/* ═══════════════════════════════════════════════════════
+   CIRO NEXUS V2 — COMMAND CENTER DASHBOARD
+   Military-grade cyberpunk HUD styling
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Layout ─────────────────────────────────────────── */
+.dashboard {
+  position: fixed;
+  inset: 0;
+  background: #05050f;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: var(--font-outfit, 'Outfit', sans-serif);
+  color: #e0e0e0;
+}
+
+/* ── Header Bar ─────────────────────────────────────── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  height: 56px;
+  background: rgba(10, 15, 30, 0.85);
+  border-bottom: 1px solid rgba(0, 240, 255, 0.12);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  z-index: 100;
+  flex-shrink: 0;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo {
+  width: 32px;
+  height: 32px;
+  color: #00f0ff;
+  filter: drop-shadow(0 0 8px rgba(0, 240, 255, 0.6));
+  animation: logoPulse 3s ease-in-out infinite;
+}
+
+@keyframes logoPulse {
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(0, 240, 255, 0.6)); }
+  50% { filter: drop-shadow(0 0 16px rgba(0, 240, 255, 0.9)); }
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: #ffffff;
+}
+
+.titleAccent {
+  color: #00f0ff;
+  text-shadow: 0 0 20px rgba(0, 240, 255, 0.5);
+}
+
+.headerCenter {
+  display: flex;
+  align-items: center;
+}
+
+.reticle {
+  padding: 4px 16px;
+  border: 1px solid rgba(0, 240, 255, 0.25);
+  border-radius: 2px;
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 11px;
+  color: rgba(0, 240, 255, 0.6);
+  letter-spacing: 2px;
+  position: relative;
+}
+
+.reticle::before,
+.reticle::after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-color: #00f0ff;
+}
+
+.reticle::before {
+  top: -2px;
+  left: -2px;
+  border-top: 1px solid;
+  border-left: 1px solid;
+}
+
+.reticle::after {
+  bottom: -2px;
+  right: -2px;
+  border-bottom: 1px solid;
+  border-right: 1px solid;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.clock {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 14px;
+  color: #00f0ff;
+  text-shadow: 0 0 12px rgba(0, 240, 255, 0.4);
+  letter-spacing: 1px;
+}
+
+.statusBadge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  border: 1px solid rgba(0, 240, 255, 0.15);
+  border-radius: 4px;
+  background: rgba(0, 240, 255, 0.05);
+}
+
+.statusBadge.alert {
+  border-color: rgba(255, 0, 60, 0.3);
+  background: rgba(255, 0, 60, 0.05);
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 8px #22c55e;
+  animation: dotPulse 2s ease-in-out infinite;
+}
+
+.statusDot.offline {
+  background: #ff003c;
+  box-shadow: 0 0 8px #ff003c;
+}
+
+@keyframes dotPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.statusText {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.userInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: rgba(0, 240, 255, 0.6);
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+}
+
+.logoutBtn {
+  background: none;
+  border: 1px solid rgba(255, 0, 60, 0.3);
+  color: #ff003c;
+  padding: 3px 10px;
+  font-size: 10px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  transition: all 0.3s ease;
+  border-radius: 2px;
+}
+
+.logoutBtn:hover {
+  background: rgba(255, 0, 60, 0.15);
+  border-color: #ff003c;
+  box-shadow: 0 0 12px rgba(255, 0, 60, 0.3);
+}
+
+/* ── Main Body ──────────────────────────────────────── */
+.body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ── Map Area ───────────────────────────────────────── */
+.mapArea {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.mapContainer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.mapGridOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(0, 240, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+.radarScan {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgba(0, 240, 255, 0.06) 30deg,
+    transparent 60deg
+  );
+  animation: radarSpin 8s linear infinite;
+  opacity: 0.5;
+}
+
+@keyframes radarSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.vignetteOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 40%,
+    rgba(5, 5, 15, 0.7) 100%
+  );
+}
+
+/* ── Glass Panels ───────────────────────────────────── */
+.panel {
+  background: rgba(10, 15, 30, 0.85);
+  border: 1px solid rgba(0, 240, 255, 0.1);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  overflow-y: auto;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel::-webkit-scrollbar {
+  width: 4px;
+}
+
+.panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.panel::-webkit-scrollbar-thumb {
+  background: rgba(0, 240, 255, 0.2);
+  border-radius: 4px;
+}
+
+.leftPanel {
+  width: 320px;
+  border-right: 1px solid rgba(0, 240, 255, 0.1);
+  padding: 16px;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.rightPanel {
+  width: 350px;
+  border-left: 1px solid rgba(0, 240, 255, 0.1);
+  padding: 16px;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+/* ── Panel Sections ─────────────────────────────────── */
+.panelHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.panelIcon {
+  width: 16px;
+  height: 16px;
+  color: #00f0ff;
+  filter: drop-shadow(0 0 4px rgba(0, 240, 255, 0.5));
+}
+
+.panelTitle {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  color: rgba(0, 240, 255, 0.7);
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+}
+
+.sectionDivider {
+  border-top: 1px solid rgba(0, 240, 255, 0.08);
+  padding-top: 16px;
+}
+
+/* ── Cyber Inputs ───────────────────────────────────── */
+.cyberSelect {
+  width: 100%;
+  background: rgba(0, 240, 255, 0.03);
+  border: 1px solid rgba(0, 240, 255, 0.15);
+  color: #e0e0e0;
+  padding: 10px 12px;
+  font-size: 12px;
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  letter-spacing: 1px;
+  border-radius: 4px;
+  outline: none;
+  transition: all 0.3s ease;
+  appearance: none;
+  cursor: pointer;
+  margin-bottom: 10px;
+}
+
+.cyberSelect:focus {
+  border-color: rgba(0, 240, 255, 0.4);
+  box-shadow: 0 0 16px rgba(0, 240, 255, 0.1), inset 0 0 8px rgba(0, 240, 255, 0.05);
+}
+
+.cyberSelect option {
+  background: #0a0f1e;
+  color: #e0e0e0;
+}
+
+.cyberTextarea {
+  width: 100%;
+  min-height: 80px;
+  background: rgba(0, 240, 255, 0.03);
+  border: 1px solid rgba(0, 240, 255, 0.15);
+  color: #e0e0e0;
+  padding: 10px 12px;
+  font-size: 12px;
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  resize: vertical;
+  border-radius: 4px;
+  outline: none;
+  transition: all 0.3s ease;
+  margin-bottom: 10px;
+}
+
+.cyberTextarea::placeholder {
+  color: rgba(0, 240, 255, 0.25);
+}
+
+.cyberTextarea:focus {
+  border-color: rgba(0, 240, 255, 0.4);
+  box-shadow: 0 0 16px rgba(0, 240, 255, 0.1), inset 0 0 8px rgba(0, 240, 255, 0.05);
+}
+
+/* ── Buttons ────────────────────────────────────────── */
+.btnCyber {
+  width: 100%;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.15), rgba(0, 240, 255, 0.05));
+  border: 1px solid rgba(0, 240, 255, 0.3);
+  color: #00f0ff;
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 12px;
+  letter-spacing: 2px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+.btnCyber:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.25), rgba(0, 240, 255, 0.1));
+  border-color: rgba(0, 240, 255, 0.5);
+  box-shadow: 0 0 24px rgba(0, 240, 255, 0.2), inset 0 0 12px rgba(0, 240, 255, 0.08);
+  transform: translateY(-1px);
+}
+
+.btnCyber:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btnCyber:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.btnCyber::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(0, 240, 255, 0.1), transparent);
+  transition: left 0.5s ease;
+}
+
+.btnCyber:hover:not(:disabled)::after {
+  left: 100%;
+}
+
+.btnIcon {
+  width: 14px;
+  height: 14px;
+}
+
+.btnPrimary {
+  composes: btnCyber;
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.2), rgba(0, 180, 220, 0.1));
+}
+
+.btnGhost {
+  composes: btnCyber;
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.btnGhost:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.25);
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: none;
+}
+
+.btnGroup {
+  display: flex;
+  gap: 8px;
+}
+
+/* ── Health Bars ────────────────────────────────────── */
+.streamRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.streamLabel {
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: rgba(255, 255, 255, 0.5);
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+}
+
+.streamValue {
+  font-size: 11px;
+  color: #00f0ff;
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  text-shadow: 0 0 6px rgba(0, 240, 255, 0.4);
+}
+
+.healthBar {
+  width: 100%;
+  height: 4px;
+  background: rgba(0, 240, 255, 0.08);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.healthFill {
+  height: 100%;
+  background: linear-gradient(90deg, #00f0ff, #00c4cc);
+  border-radius: 2px;
+  transition: width 0.6s ease;
+  box-shadow: 0 0 8px rgba(0, 240, 255, 0.4);
+}
+
+/* ── Threat Intelligence ────────────────────────────── */
+.hudEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  color: rgba(0, 240, 255, 0.3);
+  gap: 8px;
+  position: relative;
+}
+
+.hudEmptyIcon {
+  width: 32px;
+  height: 32px;
+  opacity: 0.4;
+}
+
+.hudEmptyText {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 11px;
+  letter-spacing: 2px;
+}
+
+.scanLineSmall {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #00f0ff, transparent);
+  animation: scanMove 3s ease-in-out infinite;
+}
+
+@keyframes scanMove {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.intelCard {
+  padding: 16px;
+  background: rgba(255, 0, 60, 0.05);
+  border: 1px solid rgba(255, 0, 60, 0.25);
+  border-radius: 6px;
+  position: relative;
+  overflow: hidden;
+  animation: threatPulse 2s ease-in-out infinite;
+}
+
+@keyframes threatPulse {
+  0%, 100% { border-color: rgba(255, 0, 60, 0.25); }
+  50% { border-color: rgba(255, 0, 60, 0.5); box-shadow: 0 0 20px rgba(255, 0, 60, 0.1); }
+}
+
+.sevTag {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #ff003c;
+  border: 1px solid rgba(255, 0, 60, 0.4);
+  border-radius: 2px;
+  background: rgba(255, 0, 60, 0.1);
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  margin-bottom: 8px;
+}
+
+.intelType {
+  font-size: 16px;
+  font-weight: 700;
+  color: #ff003c;
+  text-shadow: 0 0 12px rgba(255, 0, 60, 0.4);
+  margin-bottom: 8px;
+}
+
+.intelMeta {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+  display: flex;
+  gap: 12px;
+}
+
+.intelReason {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  line-height: 1.6;
+  border-left: 2px solid rgba(255, 0, 60, 0.3);
+  padding-left: 10px;
+}
+
+/* ── System Pulse Chart ─────────────────────────────── */
+.chartContainer {
+  width: 100%;
+  height: 120px;
+  position: relative;
+  border: 1px solid rgba(0, 240, 255, 0.08);
+  border-radius: 4px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.chartCanvas {
+  width: 100%;
+  height: 100%;
+}
+
+/* ── Footer / Log Panel ─────────────────────────────── */
+.footer {
+  height: 180px;
+  background: rgba(10, 15, 30, 0.9);
+  border-top: 1px solid rgba(0, 240, 255, 0.1);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  display: flex;
+  flex-shrink: 0;
+  z-index: 10;
+}
+
+.logColumn {
+  flex: 1;
+  padding: 12px 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.logColumn:first-child {
+  border-right: 1px solid rgba(0, 240, 255, 0.08);
+}
+
+.logColumn::-webkit-scrollbar {
+  width: 3px;
+}
+
+.logColumn::-webkit-scrollbar-thumb {
+  background: rgba(0, 240, 255, 0.15);
+}
+
+.logContent {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.logEmpty {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.2);
+  padding: 8px 0;
+}
+
+.logLine {
+  display: flex;
+  gap: 10px;
+  padding: 3px 0;
+  font-size: 11px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.logTime {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  color: rgba(0, 240, 255, 0.4);
+  font-size: 10px;
+  flex-shrink: 0;
+  min-width: 60px;
+}
+
+.logTag {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  color: #00f0ff;
+  font-size: 10px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.logText {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 11px;
+}
+
+.logValue {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 11px;
+}
+
+/* ── Threat Mode ────────────────────────────────────── */
+.threatActive .header {
+  border-bottom-color: rgba(255, 0, 60, 0.3);
+}
+
+.threatActive .mapGridOverlay {
+  background-image:
+    linear-gradient(rgba(255, 0, 60, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 0, 60, 0.04) 1px, transparent 1px);
+}
+
+.threatActive .radarScan {
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgba(255, 0, 60, 0.08) 30deg,
+    transparent 60deg
+  );
+}
+
+/* ── Pulse Marker ───────────────────────────────────── */
+:global(.pulse-marker-container) {
+  position: relative;
+  width: 20px;
+  height: 20px;
+}
+
+:global(.pulse-marker-core) {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  background: #ff003c;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 12px #ff003c;
+}
+
+:global(.pulse-marker-ring) {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #ff003c;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  animation: markerPulse 2s ease-out infinite;
+}
+
+@keyframes markerPulse {
+  0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(3); opacity: 0; }
+}
+
+/* ── Leaflet overrides ──────────────────────────────── */
+:global(.leaflet-container) {
+  background: #05050f !important;
+}
+
+:global(.leaflet-tile-pane) {
+  opacity: 0.7;
+}
+
+/* ── Loading States ─────────────────────────────────── */
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background: #05050f;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.loadingLogo {
+  width: 48px;
+  height: 48px;
+  color: #00f0ff;
+  animation: logoPulse 1.5s ease-in-out infinite;
+}
+
+.loadingText {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 12px;
+  letter-spacing: 3px;
+  color: rgba(0, 240, 255, 0.5);
+}
