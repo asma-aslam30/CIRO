@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Dimensions, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { TrendingDown, Users, FileText, RefreshCw } from 'lucide-react-native';
+import { TrendingDown, Users, FileText, RefreshCw, ChevronRight, Activity, ArrowDown } from 'lucide-react-native';
+import Animated, { FadeInUp, FadeInDown, FadeInLeft, FadeInRight, useSharedValue, useAnimatedStyle, withSpring, withDelay } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 import { actionsApi } from '../api/client';
+import { theme } from '../lib/theme';
+
+const { width } = Dimensions.get('window');
 
 const OutcomeView = ({ navigation }) => {
   const [state, setState] = useState({ before: {}, after: {} });
@@ -13,92 +18,141 @@ const OutcomeView = ({ navigation }) => {
         const response = await actionsApi.getState();
         setState(response.data);
       } catch (error) {
-        console.error(error);
+        console.error('Failed to fetch outcome registers:', error);
       }
     };
     fetchState();
   }, []);
 
+  const renderMetric = (label, val, color, index) => (
+    <Animated.View 
+      entering={FadeInUp.delay(300 + index * 100).duration(600)}
+      key={label} 
+      style={styles.stateRow}
+    >
+      <Text style={styles.stateKey}>{label.toUpperCase()}</Text>
+      <Text style={[styles.stateVal, { color }]}>{val}</Text>
+    </Animated.View>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient colors={['#0f172a', '#1e293b']} style={styles.background} />
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.header}>
-          <TrendingDown color="#10b981" size={32} />
-          <Text style={styles.headerTitle}>System Outcome</Text>
-        </View>
+      <LinearGradient colors={[theme.colors.bgDark, theme.colors.bgDarkSecondary]} style={styles.background} />
+      
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        <Animated.View entering={FadeInDown.duration(800)} style={styles.header}>
+          <TrendingDown color={theme.colors.primary} size={30} />
+          <View style={{ marginLeft: 15 }}>
+            <Text style={styles.headerTitle}>Impact Summary</Text>
+            <Text style={styles.headerSubtitle}>Post-mitigation efficiency metrics</Text>
+          </View>
+        </Animated.View>
 
         <View style={styles.comparisonContainer}>
-          <View style={styles.stateCard}>
-            <Text style={styles.stateLabel}>BEFORE RESPONSE</Text>
-            {Object.entries(state.before).map(([key, val]) => (
-              <View key={key} style={styles.stateRow}>
-                <Text style={styles.stateKey}>{key.toUpperCase()}:</Text>
-                <Text style={[styles.stateVal, { color: '#ef4444' }]}>{val}</Text>
-              </View>
-            ))}
-          </View>
+          {/* Pre response card */}
+          <Animated.View 
+            entering={FadeInLeft.delay(200).duration(600)}
+            style={[styles.stateCard, { borderColor: theme.colors.borderRed }]}
+          >
+            <View style={styles.cardHeader}>
+              <Activity color={theme.colors.alert} size={15} />
+              <Text style={[styles.stateLabel, { color: theme.colors.alert }]}>PRE-RESPONSE TELEMETRY</Text>
+            </View>
+            <View style={styles.cardDivider} />
+            {Object.entries(state.before).length > 0 ? (
+              Object.entries(state.before).map(([key, val], i) => renderMetric(key, val, theme.colors.alert, i))
+            ) : (
+              <Text style={styles.emptyText}>Zero records processed</Text>
+            )}
+          </Animated.View>
 
-          <View style={styles.arrowContainer}>
-            <Text style={styles.arrowText}>↓</Text>
-          </View>
+          <Animated.View 
+            entering={FadeInUp.delay(400).duration(400)}
+            style={styles.arrowContainer}
+          >
+            <ArrowDown color={theme.colors.primary} size={22} style={styles.arrowGlow} />
+          </Animated.View>
 
-          <View style={styles.stateCard}>
-            <Text style={styles.stateLabel}>AFTER RESPONSE</Text>
-            {Object.entries(state.after).map(([key, val]) => (
-              <View key={key} style={styles.stateRow}>
-                <Text style={styles.stateKey}>{key.toUpperCase()}:</Text>
-                <Text style={[styles.stateVal, { color: '#10b981' }]}>{val}</Text>
-              </View>
-            ))}
-          </View>
+          {/* Post response card */}
+          <Animated.View 
+            entering={FadeInRight.delay(200).duration(600)}
+            style={[styles.stateCard, { borderColor: 'rgba(16, 185, 129, 0.25)' }]}
+          >
+            <View style={styles.cardHeader}>
+              <TrendingDown color={theme.colors.success} size={15} />
+              <Text style={[styles.stateLabel, { color: theme.colors.success }]}>POST-RESPONSE Telemetry</Text>
+            </View>
+            <View style={styles.cardDivider} />
+            {Object.entries(state.after).length > 0 ? (
+              Object.entries(state.after).map(([key, val], i) => renderMetric(key, val, theme.colors.success, i))
+            ) : (
+              <Text style={styles.emptyText}>Synthesizing logs...</Text>
+            )}
+          </Animated.View>
         </View>
 
         <View style={styles.impactGrid}>
-          <View style={styles.impactBox}>
-            <Users color="#3b82f6" size={24} />
+          <Animated.View entering={FadeInUp.delay(600)} style={styles.impactBox}>
+            <Users color={theme.colors.primary} size={22} />
             <Text style={styles.impactValue}>12,400</Text>
-            <Text style={styles.impactLabel}>Users Alerted</Text>
-          </View>
-          <View style={styles.impactBox}>
-            <FileText color="#f59e0b" size={24} />
+            <Text style={styles.impactLabel}>Operators Alerted</Text>
+          </Animated.View>
+          <Animated.View entering={FadeInUp.delay(700)} style={styles.impactBox}>
+            <FileText color={theme.colors.warning} size={22} />
             <Text style={styles.impactValue}>4</Text>
-            <Text style={styles.impactLabel}>Agencies Coordinated</Text>
-          </View>
+            <Text style={styles.impactLabel}>Swarm Clusters</Text>
+          </Animated.View>
         </View>
 
-        <TouchableOpacity 
-          style={styles.resetButton}
-          onPress={() => navigation.navigate('InputPanel')}
-        >
-          <RefreshCw color="#fff" size={20} />
-          <Text style={styles.resetText}>NEW SCENARIO</Text>
-        </TouchableOpacity>
+        <Animated.View entering={FadeInUp.delay(800)}>
+          <TouchableOpacity 
+            style={styles.resetButton}
+            onPress={() => {
+              if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              navigation.navigate('MainTabs');
+            }}
+            activeOpacity={0.8}
+          >
+            <LinearGradient
+              colors={[theme.colors.primary, theme.colors.accent]}
+              style={styles.btnGradient}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+            >
+              <RefreshCw color={theme.colors.bgDark} size={18} />
+              <Text style={styles.resetText}>RESET FIELD CONSOLE</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </Animated.View>
       </ScrollView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0f172a' },
+  container: { flex: 1, backgroundColor: theme.colors.bgDark },
   background: { ...StyleSheet.absoluteFillObject },
   content: { padding: 20 },
   header: { flexDirection: 'row', alignItems: 'center', marginBottom: 25, marginTop: 10 },
-  headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#fff', marginLeft: 12 },
-  comparisonContainer: { marginBottom: 30 },
-  stateCard: { backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 16, padding: 15, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
-  stateLabel: { fontSize: 12, fontWeight: 'bold', color: '#94a3b8', marginBottom: 12, letterSpacing: 1 },
-  stateRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-  stateKey: { color: '#fff', fontSize: 14, fontWeight: '500' },
-  stateVal: { fontSize: 14, fontWeight: 'bold' },
-  arrowContainer: { alignItems: 'center', padding: 10 },
-  arrowText: { color: '#3b82f6', fontSize: 24, fontWeight: 'bold' },
-  impactGrid: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 30 },
-  impactBox: { backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 16, padding: 20, width: '48%', alignItems: 'center' },
-  impactValue: { fontSize: 20, fontWeight: 'bold', color: '#fff', marginTop: 10 },
-  impactLabel: { fontSize: 12, color: '#94a3b8', marginTop: 4 },
-  resetButton: { flexDirection: 'row', backgroundColor: '#3b82f6', padding: 18, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
-  resetText: { color: '#fff', fontSize: 16, fontWeight: 'bold', marginLeft: 10 },
+  headerTitle: { fontSize: 24, fontFamily: theme.fonts.bold, color: '#fff', letterSpacing: 1 },
+  headerSubtitle: { fontSize: 13, color: theme.colors.dim, marginTop: 4, fontFamily: theme.fonts.semibold },
+  comparisonContainer: { marginBottom: 25 },
+  stateCard: { ...theme.glass, backgroundColor: 'rgba(5, 5, 15, 0.75)', padding: 18, marginBottom: 10 },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 8 },
+  stateLabel: { fontSize: 10, fontFamily: theme.fonts.bold, letterSpacing: 1.5, textTransform: 'uppercase' },
+  cardDivider: { height: 1, backgroundColor: 'rgba(255,255,255,0.05)', marginBottom: 12 },
+  stateRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
+  stateKey: { color: theme.colors.dim, fontSize: 11, fontFamily: theme.fonts.bold, letterSpacing: 0.5 },
+  stateVal: { fontSize: 13, fontFamily: theme.fonts.bold },
+  arrowContainer: { alignItems: 'center', marginVertical: 8, opacity: 0.5 },
+  arrowGlow: { shadowColor: theme.colors.primary, shadowOffset: {width:0,height:0}, shadowOpacity: 0.6, shadowRadius: 5 },
+  impactGrid: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 25 },
+  impactBox: { ...theme.glass, backgroundColor: 'rgba(0,0,0,0.4)', padding: 18, width: '48%', alignItems: 'center', gap: 6 },
+  impactValue: { fontSize: 22, fontFamily: theme.fonts.bold, color: '#fff', marginTop: 4 },
+  impactLabel: { fontSize: 9, color: theme.colors.dim, marginTop: 2, fontFamily: theme.fonts.bold, letterSpacing: 1, textTransform: 'uppercase' },
+  resetButton: { height: 56, borderRadius: 8, overflow: 'hidden', shadowColor: theme.colors.primary, shadowOpacity: 0.4, shadowRadius: 10, elevation: 8 },
+  btnGradient: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  resetText: { color: theme.colors.bgDark, fontSize: 13, fontFamily: theme.fonts.bold, letterSpacing: 1.5 },
+  emptyText: { color: theme.colors.dim, fontSize: 11, fontStyle: 'italic', textAlign: 'center', paddingVertical: 10, fontFamily: theme.fonts.semibold }
 });
 
 export default OutcomeView;

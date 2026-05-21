@@ -1,121 +1,585 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, TextInput } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { 
+  View, 
+  Text, 
+  TouchableOpacity, 
+  StyleSheet, 
+  ScrollView, 
+  Alert, 
+  TextInput, 
+  Platform, 
+  ActivityIndicator 
+} from 'react-native';
 import { signalAPI } from '../lib/api';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as Haptics from 'expo-haptics';
+import Animated, { 
+  FadeInDown, 
+  Layout, 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withRepeat, 
+  withTiming, 
+  withSequence 
+} from 'react-native-reanimated';
+import { 
+  Activity, 
+  Radio, 
+  Cpu, 
+  RefreshCw, 
+  Send, 
+  Sparkles,
+  CloudRain,
+  AlertTriangle,
+  Car
+} from 'lucide-react-native';
+import { theme, globalStyles } from '../lib/theme';
 
 export default function InputScreen() {
   const [loading, setLoading] = useState(false);
   const [customText, setCustomText] = useState('');
+  const [focusedInput, setFocusedInput] = useState(false);
+  
+  // Dynamic metrics for the data stream bars
+  const [socialLoad, setSocialLoad] = useState(65);
+  const [weatherLoad, setWeatherLoad] = useState(38);
+  const [trafficLoad, setTrafficLoad] = useState(84);
+  const [isAutopilot, setIsAutopilot] = useState(false);
+
+  // Pulse animation for the live system status dot
+  const pulseVal = useSharedValue(1);
+
+  useEffect(() => {
+    pulseVal.value = withRepeat(
+      withSequence(
+        withTiming(1.3, { duration: 1000 }),
+        withTiming(1, { duration: 1000 })
+      ),
+      -1,
+      true
+    );
+
+    // Periodically fluctuate load numbers slightly for realism
+    const interval = setInterval(() => {
+      setSocialLoad(prev => Math.min(Math.max(prev + Math.floor(Math.random() * 11) - 5, 20), 95));
+      setWeatherLoad(prev => Math.min(Math.max(prev + Math.floor(Math.random() * 9) - 4, 10), 95));
+      setTrafficLoad(prev => Math.min(Math.max(prev + Math.floor(Math.random() * 7) - 3, 40), 98));
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const pulseStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pulseVal.value }],
+    opacity: 0.8 / pulseVal.value,
+  }));
 
   const sendSignal = async (type, payload = null) => {
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setLoading(true);
     try {
       let signalData;
       if (type === 'custom' && payload) {
-        signalData = { source: 'social_media', text: payload, location: 'Unknown' };
-      } else if (type === 'social') {
-        signalData = { source: 'social_media', text: 'G-10 mein pani bhar gaya hai, gaariyan phans gayi hain', location: 'G-10' };
-      } else if (type === 'weather') {
-        signalData = { source: 'weather_api', text: 'Heavy rainfall alert: 50mm expected in next 2 hours', location: 'Citywide', severity: 'HIGH' };
-      } else if (type === 'traffic') {
-        signalData = { source: 'traffic_sensors', text: 'Traffic congestion spike. Average speed < 5km/h', location: 'G-10 Markaz', severity: 'HIGH' };
+        signalData = { source: 'social_media', text: payload, location: 'Field Operator' };
+      } else {
+        signalData = await signalAPI.getRandomSignal(type);
       }
       
       await signalAPI.sendSignals([signalData]);
-      alert(`Success: ${type.toUpperCase()} signal injected into CIRO Nexus.`);
-      setCustomText(''); // clear input after sending
+      
+      Alert.alert(
+        "SIGNAL INJECTED",
+        `Source: ${signalData.source.toUpperCase()}\nLocation: ${signalData.location.toUpperCase()}\n\n"${signalData.text}"`,
+        [{ text: "OK" }]
+      );
+      
+      setCustomText('');
     } catch (err) {
-      alert('Error: Failed to send signal.');
+      Alert.alert('TRANSMISSION ERROR', 'Failed to inject signal stream. Verify server link.');
     } finally {
       setLoading(false);
     }
   };
 
   const triggerAnalysis = async () => {
+    if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setLoading(true);
     try {
       await signalAPI.triggerAnalysis();
-      alert('Analysis Triggered: Antigravity pipeline started in background. Check other tabs.');
+      Alert.alert('ANALYSIS ACTIVE', 'AI core pipeline initialized. Inspect Detection and Response tabs.');
     } catch (err) {
-      alert('Error: No signals to analyze or pipeline failed.');
+      Alert.alert('CORE FAILURE', 'No signals found to execute analysis matrix.');
     } finally {
       setLoading(false);
     }
   };
 
   const resetSystem = async () => {
-    await signalAPI.resetState();
-    alert('Reset: CIRO Nexus state cleared.');
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    Alert.alert(
+      "CONFIRM FLUSH",
+      "Are you sure you want to restore system settings to default?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "CONFIRM", 
+          onPress: async () => {
+            try {
+              await signalAPI.resetState();
+              Alert.alert('SYSTEM FLUSHED', 'All registers restored to factory metrics.');
+            } catch (e) {
+              Alert.alert('Error', 'Failed to flush registers.');
+            }
+          } 
+        }
+      ]
+    );
   };
 
+  const toggleAutopilot = async () => {
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setLoading(true);
+    try {
+      const data = await signalAPI.toggleAutopilot();
+      setIsAutopilot(data.enabled);
+      Alert.alert(
+        'AUTOPILOT ' + (data.enabled ? 'ENABLED' : 'DISABLED'), 
+        data.enabled ? 'Live simulator active. Signals will inject automatically.' : 'Manual mode restored.'
+      );
+    } catch (e) {
+      Alert.alert('Error', 'Failed to toggle autopilot.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const fetchAutopilot = async () => {
+      try {
+        const data = await signalAPI.getAutopilotStatus();
+        setIsAutopilot(data.enabled);
+      } catch (e) {
+        // Silently fail if not reachable yet
+      }
+    };
+    fetchAutopilot();
+  }, []);
+
   return (
-    <LinearGradient colors={['#05050f', '#0a0f1e', '#05050f']} style={styles.container}>
-      <ScrollView>
-        <Text style={styles.header}>Signal Injection</Text>
-        
-        <View style={styles.glassCard}>
-          <Text style={styles.cardTitle}>Simulate Crisis Inputs</Text>
-          <Text style={styles.cardDesc}>Inject live field data directly into the CIRO central processing matrix.</Text>
-          
-          <View style={styles.customInputContainer}>
-            <TextInput
-              style={styles.input}
-              placeholder="Type custom social post..."
-              placeholderTextColor="#7a8baa"
-              value={customText}
-              onChangeText={setCustomText}
-            />
-            <TouchableOpacity style={styles.btnCustom} onPress={() => sendSignal('custom', customText)} disabled={loading || !customText}>
-              <Text style={styles.btnText}>Send</Text>
-            </TouchableOpacity>
+    <LinearGradient 
+      colors={[theme.colors.bgDark, theme.colors.bgDarkSecondary, theme.colors.bgDark]} 
+      style={globalStyles.container}
+    >
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Custom Header Bar */}
+        <Animated.View entering={FadeInDown.duration(600)} style={globalStyles.headerRow}>
+          <View>
+            <Text style={styles.brandTitle}>
+              NEXUS <Text style={styles.neonBrand}>CORE</Text>
+            </Text>
+            <Text style={styles.brandSubtitle}>COGNITIVE CONSOLE v2.0</Text>
           </View>
 
-          <TouchableOpacity style={styles.btnSocial} onPress={() => sendSignal('social')} disabled={loading}>
-            <Text style={styles.btnText}>📝 Add Social Post (Flood)</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.btnWeather} onPress={() => sendSignal('weather')} disabled={loading}>
-            <Text style={styles.btnText}>🌧 Trigger Weather Alert</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.btnTraffic} onPress={() => sendSignal('traffic')} disabled={loading}>
-            <Text style={styles.btnText}>🚗 Simulate Traffic Spike</Text>
-          </TouchableOpacity>
-        </View>
+          <View style={styles.statusBadge}>
+            <Animated.View style={[styles.pulseDot, pulseStyle]} />
+            <View style={[styles.pulseDot, { position: 'absolute', left: 10 }]} />
+            <Text style={styles.statusText}>LIVE MATRIX</Text>
+          </View>
+        </Animated.View>
 
-        <View style={styles.glassCard}>
-          <Text style={styles.cardTitle}>Pipeline Control</Text>
+        {/* Data Stream Metrics (Web Parity) */}
+        <Animated.View entering={FadeInDown.delay(100).duration(600)} style={styles.hudCard}>
+          <View style={styles.cardHeader}>
+            <Cpu color={theme.colors.primary} size={16} />
+            <Text style={styles.cardTitle}>SWARM COGNITION DATA STREAMS</Text>
+          </View>
+          <View style={styles.divider} />
+
+          {/* Social Load Stream */}
+          <View style={styles.streamRow}>
+            <View style={styles.streamLabelRow}>
+              <Text style={styles.streamLabel}>SOCIAL_MEDIA_STREAM</Text>
+              <Text style={[styles.streamVal, { color: theme.colors.primary }]}>{socialLoad}%</Text>
+            </View>
+            <View style={styles.streamBarBackground}>
+              <View style={[styles.streamBarFill, { width: `${socialLoad}%`, backgroundColor: theme.colors.primary }]} />
+            </View>
+          </View>
+
+          {/* Weather Load Stream */}
+          <View style={styles.streamRow}>
+            <View style={styles.streamLabelRow}>
+              <Text style={styles.streamLabel}>METEOROLOGICAL_SENSORS</Text>
+              <Text style={[styles.streamVal, { color: theme.colors.accent }]}>{weatherLoad}%</Text>
+            </View>
+            <View style={styles.streamBarBackground}>
+              <View style={[styles.streamBarFill, { width: `${weatherLoad}%`, backgroundColor: theme.colors.accent }]} />
+            </View>
+          </View>
+
+          {/* Traffic Load Stream */}
+          <View style={styles.streamRow}>
+            <View style={styles.streamLabelRow}>
+              <Text style={styles.streamLabel}>VEHICULAR_TELEMETRY</Text>
+              <Text style={[styles.streamVal, { color: theme.colors.warning }]}>{trafficLoad}%</Text>
+            </View>
+            <View style={styles.streamBarBackground}>
+              <View style={[styles.streamBarFill, { width: `${trafficLoad}%`, backgroundColor: theme.colors.warning }]} />
+            </View>
+          </View>
+        </Animated.View>
+
+        {/* Custom Input Ingestion */}
+        <Animated.View entering={FadeInDown.delay(200).duration(600)} style={globalStyles.glassCard}>
+          <View style={styles.cardHeader}>
+            <Radio color={theme.colors.primary} size={16} />
+            <Text style={styles.cardTitle}>MANUAL INGESTION VECTOR</Text>
+          </View>
+          <Text style={styles.cardDesc}>Inject text-based reports directly into active logic processing buffers.</Text>
           
-          <TouchableOpacity onPress={triggerAnalysis} disabled={loading}>
-            <LinearGradient colors={['#00f0ff', '#0099cc']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.btnAnalyze}>
-              <Text style={styles.btnTextAnalyze}>⚡ TRIGGER AI ANALYSIS</Text>
+          <View style={styles.inputWrapper}>
+            <TextInput
+              style={[
+                styles.customTextInput,
+                focusedInput && styles.customTextInputFocused
+              ]}
+              placeholder="Enter field telemetry in English, Urdu or Roman Urdu..."
+              placeholderTextColor={theme.colors.dim}
+              value={customText}
+              onChangeText={setCustomText}
+              onFocus={() => setFocusedInput(true)}
+              onBlur={() => setFocusedInput(false)}
+              multiline
+            />
+            <TouchableOpacity 
+              style={[
+                styles.sendBtn,
+                (!customText || loading) && styles.sendBtnDisabled
+              ]} 
+              onPress={() => sendSignal('custom', customText)}
+              disabled={loading || !customText}
+              activeOpacity={0.8}
+            >
+              <Send color={customText ? theme.colors.bgDark : theme.colors.dim} size={18} />
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+
+        {/* Simulator Grid buttons */}
+        <Animated.View entering={FadeInDown.delay(300).duration(600)} style={globalStyles.glassCard}>
+          <View style={styles.cardHeader}>
+            <Sparkles color={theme.colors.accent} size={16} />
+            <Text style={styles.cardTitle}>SIMULATE CRITICAL PATTERNS</Text>
+          </View>
+          <Text style={styles.cardDesc}>Synthesize telemetry signatures to stress-test regional mitigation scripts.</Text>
+
+          <View style={styles.simulationGrid}>
+            {/* Social Post */}
+            <TouchableOpacity 
+              style={[styles.simButton, { borderColor: theme.colors.accent }]}
+              onPress={() => sendSignal('social')}
+              disabled={loading}
+              activeOpacity={0.7}
+            >
+              <LinearGradient 
+                colors={['rgba(176, 38, 255, 0.03)', 'rgba(176, 38, 255, 0.1)']} 
+                style={styles.simButtonGradient}
+              >
+                <CloudRain color={theme.colors.accent} size={22} />
+                <Text style={[styles.simButtonText, { color: theme.colors.accent }]}>FLOOD REPORT</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            {/* Weather alert */}
+            <TouchableOpacity 
+              style={[styles.simButton, { borderColor: theme.colors.primary }]}
+              onPress={() => sendSignal('weather')}
+              disabled={loading}
+              activeOpacity={0.7}
+            >
+              <LinearGradient 
+                colors={['rgba(0, 240, 255, 0.03)', 'rgba(0, 240, 255, 0.1)']} 
+                style={styles.simButtonGradient}
+              >
+                <AlertTriangle color={theme.colors.primary} size={22} />
+                <Text style={[styles.simButtonText, { color: theme.colors.primary }]}>WEATHER INCIDENT</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            {/* Traffic alert */}
+            <TouchableOpacity 
+              style={[styles.simButton, { borderColor: theme.colors.warning }]}
+              onPress={() => sendSignal('traffic')}
+              disabled={loading}
+              activeOpacity={0.7}
+            >
+              <LinearGradient 
+                colors={['rgba(255, 224, 102, 0.03)', 'rgba(255, 224, 102, 0.1)']} 
+                style={styles.simButtonGradient}
+              >
+                <Car color={theme.colors.warning} size={22} />
+                <Text style={[styles.simButtonText, { color: theme.colors.warning }]}>TRAFFIC STAKE</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+
+        {/* Core Controls */}
+        <Animated.View entering={FadeInDown.delay(400).duration(600)} style={globalStyles.glassCard}>
+          <View style={styles.cardHeader}>
+            <Cpu color={theme.colors.primary} size={16} />
+            <Text style={styles.cardTitle}>PIPELINE CONTROL COMMANDS</Text>
+          </View>
+          <Text style={styles.cardDesc}>Activate machine analysis arrays over currently buffered ingestion loads.</Text>
+          
+          <TouchableOpacity onPress={triggerAnalysis} disabled={loading || isAutopilot} activeOpacity={0.8}>
+            <LinearGradient 
+              colors={[theme.colors.primary, theme.colors.accent]} 
+              start={{ x: 0, y: 0 }} 
+              end={{ x: 1, y: 0 }} 
+              style={styles.btnAnalyze}
+            >
+              {loading ? (
+                <ActivityIndicator color={theme.colors.bgDark} />
+              ) : (
+                <Text style={styles.btnTextAnalyze}>⚡ EXECUTE SWARM REASONING</Text>
+              )}
             </LinearGradient>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.btnReset} onPress={resetSystem} disabled={loading}>
-            <Text style={styles.btnTextReset}>↻ RESET SYSTEM STATE</Text>
+          <TouchableOpacity style={styles.btnReset} onPress={resetSystem} disabled={loading || isAutopilot} activeOpacity={0.7}>
+            <RefreshCw color={theme.colors.alert} size={16} />
+            <Text style={styles.btnTextReset}>FLUSH MEMORY REGISTERS</Text>
           </TouchableOpacity>
-        </View>
+
+          <TouchableOpacity 
+            style={[
+              styles.btnReset, 
+              { marginTop: 15, borderColor: isAutopilot ? theme.colors.success : '#b026ff', backgroundColor: isAutopilot ? 'rgba(16, 185, 129, 0.1)' : 'transparent' }
+            ]} 
+            onPress={toggleAutopilot} 
+            disabled={loading} 
+            activeOpacity={0.7}
+          >
+            <Activity color={isAutopilot ? theme.colors.success : '#b026ff'} size={16} />
+            <Text style={[styles.btnTextReset, { color: isAutopilot ? theme.colors.success : '#b026ff' }]}>
+              {isAutopilot ? '⚡ AUTOPILOT ACTIVE' : 'AUTOPILOT MODE'}
+            </Text>
+          </TouchableOpacity>
+        </Animated.View>
       </ScrollView>
     </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20 },
-  header: { color: '#00f0ff', fontSize: 28, fontFamily: 'Outfit_700Bold', marginBottom: 20, letterSpacing: 1, textShadowColor: 'rgba(0, 240, 255, 0.5)', textShadowOffset: {width: 0, height: 0}, textShadowRadius: 10 },
-  glassCard: { backgroundColor: 'rgba(10, 15, 30, 0.6)', borderColor: 'rgba(0, 240, 255, 0.2)', borderWidth: 1, borderRadius: 16, padding: 20, marginBottom: 20, shadowColor: '#00f0ff', shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.1, shadowRadius: 10 },
-  cardTitle: { color: '#e0e8ff', fontSize: 20, fontFamily: 'Outfit_700Bold', marginBottom: 10 },
-  cardDesc: { color: '#7a8baa', fontSize: 14, fontFamily: 'Outfit_400Regular', marginBottom: 20 },
-  btnSocial: { backgroundColor: 'rgba(168, 85, 247, 0.15)', borderColor: '#a855f7', borderWidth: 1, padding: 15, borderRadius: 8, marginBottom: 12 },
-  btnWeather: { backgroundColor: 'rgba(0, 240, 255, 0.15)', borderColor: '#00f0ff', borderWidth: 1, padding: 15, borderRadius: 8, marginBottom: 12 },
-  btnTraffic: { backgroundColor: 'rgba(255, 224, 102, 0.15)', borderColor: '#ffe066', borderWidth: 1, padding: 15, borderRadius: 8, marginBottom: 12 },
-  btnText: { color: '#fff', fontSize: 16, fontFamily: 'Outfit_600SemiBold', textAlign: 'center' },
-  customInputContainer: { flexDirection: 'row', marginBottom: 15 },
-  input: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', borderColor: 'rgba(0, 240, 255, 0.3)', borderWidth: 1, borderRadius: 8, padding: 12, color: '#e0e8ff', fontFamily: 'Outfit_400Regular', marginRight: 10 },
-  btnCustom: { backgroundColor: 'rgba(0, 240, 255, 0.2)', borderColor: '#00f0ff', borderWidth: 1, padding: 12, borderRadius: 8, justifyContent: 'center' },
-  btnAnalyze: { padding: 15, borderRadius: 8, alignItems: 'center', marginBottom: 15, shadowColor: '#00f0ff', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.6, shadowRadius: 8 },
-  btnTextAnalyze: { color: '#05050f', fontSize: 16, fontFamily: 'Outfit_700Bold', letterSpacing: 1 },
-  btnReset: { backgroundColor: 'transparent', borderColor: '#ff003c', borderWidth: 1, padding: 15, borderRadius: 8, alignItems: 'center' },
-  btnTextReset: { color: '#ff003c', fontSize: 14, fontFamily: 'Outfit_700Bold', letterSpacing: 1 },
+  scrollContent: {
+    padding: 20,
+    paddingBottom: 110, // Margin to protect against overlapping bottom tabs
+  },
+  brandTitle: {
+    fontFamily: theme.fonts.bold,
+    fontSize: 24,
+    color: '#ffffff',
+    letterSpacing: 2,
+  },
+  neonBrand: {
+    color: theme.colors.primary,
+    textShadowColor: 'rgba(0, 240, 255, 0.6)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 8,
+  },
+  brandSubtitle: {
+    fontFamily: theme.fonts.semibold,
+    fontSize: 9,
+    color: theme.colors.dim,
+    letterSpacing: 1.5,
+    marginTop: 2,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 240, 255, 0.08)',
+    borderColor: theme.colors.border,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  pulseDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: theme.colors.primary,
+    marginRight: 8,
+  },
+  statusText: {
+    color: theme.colors.primary,
+    fontFamily: theme.fonts.bold,
+    fontSize: 9,
+    letterSpacing: 1,
+  },
+  hudCard: {
+    ...theme.glass,
+    backgroundColor: 'rgba(5, 5, 15, 0.75)',
+    padding: 20,
+    marginBottom: 16,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  cardTitle: {
+    color: '#ffffff',
+    fontFamily: theme.fonts.bold,
+    fontSize: 12,
+    letterSpacing: 1.5,
+    marginLeft: 8,
+  },
+  cardDesc: {
+    color: theme.colors.dim,
+    fontFamily: theme.fonts.regular,
+    fontSize: 12,
+    lineHeight: 18,
+    marginBottom: 20,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    marginVertical: 12,
+  },
+  streamRow: {
+    marginBottom: 14,
+  },
+  streamLabelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  streamLabel: {
+    color: theme.colors.dim,
+    fontFamily: theme.fonts.semibold,
+    fontSize: 9,
+    letterSpacing: 1,
+  },
+  streamVal: {
+    fontFamily: theme.fonts.bold,
+    fontSize: 11,
+  },
+  streamBarBackground: {
+    height: 4,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderColor: 'rgba(255, 255, 255, 0.04)',
+    borderWidth: 0.5,
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  streamBarFill: {
+    height: '100%',
+    borderRadius: 2,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderColor: theme.colors.border,
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 4,
+  },
+  customTextInput: {
+    flex: 1,
+    minHeight: 80,
+    maxHeight: 150,
+    color: theme.colors.text,
+    fontFamily: theme.fonts.semibold,
+    fontSize: 14,
+    padding: 10,
+    textAlignVertical: 'top',
+  },
+  customTextInputFocused: {
+    borderColor: theme.colors.primary,
+  },
+  sendBtn: {
+    backgroundColor: theme.colors.primary,
+    width: 44,
+    height: 44,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+    marginRight: 4,
+    marginBottom: 4,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.4,
+    shadowRadius: 5,
+  },
+  sendBtnDisabled: {
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    shadowOpacity: 0,
+  },
+  simulationGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  simButton: {
+    flex: 1,
+    height: 70,
+    borderRadius: 10,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  simButtonGradient: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 6,
+  },
+  simButtonText: {
+    fontFamily: theme.fonts.bold,
+    fontSize: 9,
+    letterSpacing: 0.5,
+    marginTop: 6,
+    textAlign: 'center',
+  },
+  btnAnalyze: {
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 15,
+    shadowColor: theme.colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  btnTextAnalyze: {
+    color: theme.colors.bgDark,
+    fontFamily: theme.fonts.bold,
+    fontSize: 14,
+    letterSpacing: 1.5,
+  },
+  btnReset: {
+    flexDirection: 'row',
+    backgroundColor: 'transparent',
+    borderColor: theme.colors.alert,
+    borderWidth: 1,
+    padding: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  btnTextReset: {
+    color: theme.colors.alert,
+    fontFamily: theme.fonts.bold,
+    fontSize: 12,
+    letterSpacing: 1,
+  },
 });

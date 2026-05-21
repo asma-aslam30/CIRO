@@ -1,3 +1,6 @@
+
+
+
 def get_mock_traffic(location: str):
     return {
         "location": location,

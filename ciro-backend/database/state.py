@@ -4,12 +4,14 @@ from models.crisis import CrisisReport
 from database.db import SessionLocal, SignalDB, CrisisDB, ActionDB, init_db
 from database.socket_manager import manager
 import asyncio
+from datetime import datetime
 
 class GlobalState:
     def __init__(self):
         init_db()
         self.signals: List[Signal] = []
         self.current_crisis: CrisisReport = None
+        self.crisis_history: List[Dict] = []   # <-- NEW: full history
         self.action_log: List[Dict] = []
         self.system_state: Dict = {"before": {}, "after": {}}
 
@@ -38,6 +40,17 @@ class GlobalState:
     def set_crisis(self, crisis: CrisisReport):
         self.current_crisis = crisis
         
+        # Build history entry with timestamp
+        crisis_dict = crisis.dict()
+        crisis_dict["detected_at"] = datetime.now().strftime("%H:%M:%S")
+        crisis_dict["id"] = len(self.crisis_history) + 1
+
+        # Only add to history if not a duplicate of the very last entry
+        if (not self.crisis_history or 
+            self.crisis_history[-1]["crisis_type"] != crisis_dict["crisis_type"] or 
+            self.crisis_history[-1]["location"] != crisis_dict["location"]):
+            self.crisis_history.append(crisis_dict)
+
         # Save to DB
         db = SessionLocal()
         db_crisis = CrisisDB(
@@ -52,15 +65,17 @@ class GlobalState:
         db.commit()
         db.close()
         
-        # Notify Dashboard
+        # Notify Dashboard — send full history too
         asyncio.create_task(manager.broadcast({
             "type": "CRISIS_DETECTED", 
-            "data": crisis.dict()
+            "data": crisis_dict,
+            "all_crises": self.crisis_history
         }))
 
     def log_action(self, action: str, status: str, detail: str, time: str):
         log_entry = {
             "action": action,
+            "title": action,
             "status": status,
             "detail": detail,
             "time": time
@@ -93,6 +108,10 @@ class GlobalState:
         self.current_crisis = None
         self.action_log.clear()
         self.system_state = {"before": {}, "after": {}}
-        asyncio.create_task(manager.broadcast({"type": "SYSTEM_RESET"}))
+        # NOTE: crisis_history intentionally NOT cleared so map keeps all pins
+        asyncio.create_task(manager.broadcast({
+            "type": "SYSTEM_RESET",
+            "all_crises": self.crisis_history  # keep history alive on frontend
+        }))
 
 state = GlobalState()

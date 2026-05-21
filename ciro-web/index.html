@@ -13,11 +13,62 @@
   </head>
   <body class="nexus-theme">
     
-    <!-- Background Elements -->
-    <div id="main-map"></div>
-    <div class="map-overlay-grid"></div>
-    <div class="radar-scan"></div>
-    <div class="vignette-overlay"></div>
+    <!-- Background Elements (Moved to Center Map Panel) -->
+
+    <!-- Authentication Portal -->
+    <div id="auth-portal" class="auth-portal-overlay">
+      <div class="auth-card glass-panel fade-in-top">
+        <div class="corner-accent top-left"></div>
+        <div class="corner-accent top-right"></div>
+        <div class="corner-accent bottom-left"></div>
+        <div class="corner-accent bottom-right"></div>
+
+        <div class="auth-header">
+          <i data-lucide="hexagon" class="logo-icon pulse-glow"></i>
+          <h1 class="auth-title">CIRO <span class="neon-text">NEXUS</span></h1>
+          <p class="auth-subtitle">OPERATOR SECURE GATEWAY</p>
+        </div>
+
+        <div class="error-container hidden" id="auth-error-box">
+          <span class="error-prefix">[ERR]</span>
+          <span id="auth-error-msg"></span>
+        </div>
+
+        <form id="auth-form" class="auth-form">
+          <div class="input-wrapper">
+            <label for="auth-email">OPERATOR_ID (EMAIL)</label>
+            <input type="email" id="auth-email" class="cyber-input" placeholder="operator@ciro.nexus" required autocomplete="email" />
+          </div>
+          <div class="input-wrapper">
+            <label for="auth-password">SECURE_PASSCODE</label>
+            <div class="password-input-container">
+              <input type="password" id="auth-password" class="cyber-input" placeholder="••••••••••••" required autocomplete="current-password" />
+              <button type="button" id="auth-toggle-pass" class="pass-toggle-btn">SHOW</button>
+            </div>
+          </div>
+          <button type="submit" id="btn-auth-submit" class="btn-cyber-primary">
+            <span class="btn-content">
+              <i data-lucide="shield-check"></i> <span id="auth-submit-label">AUTHORIZE_SESSION</span>
+            </span>
+          </button>
+        </form>
+
+        <div class="auth-toggle-mode">
+          <p>
+            <span id="auth-switch-prompt">No authorized profile?</span>
+            <button id="btn-auth-switch" class="switch-link-btn">INITIALIZE ACCOUNT</button>
+          </p>
+        </div>
+
+        <div class="scan-line-small"></div>
+      </div>
+      
+      <div class="auth-system-status">
+        <span class="dot green"></span>
+        <span>SYS.STATUS: OPERATIONAL // PORTAL.ONLINE</span>
+      </div>
+    </div>
+
 
     <!-- HUD Overlay Layers -->
     <div class="hud-layer">
@@ -40,6 +91,11 @@
             <span class="dot green" id="status-dot"></span>
             <span id="backend-status" class="mono-text">SYSTEM_NOMINAL</span>
           </div>
+          <div class="operator-badge glass-panel hidden" id="operator-info-badge">
+            <i data-lucide="user" class="neon-icon"></i>
+            <span id="operator-email" class="mono-text">operator@ciro.nexus</span>
+            <button id="btn-logout" class="logout-btn">LOGOUT</button>
+          </div>
         </div>
       </header>
 
@@ -53,6 +109,13 @@
             </div>
             
             <div class="panel-section">
+              <div class="autopilot-toggle-row">
+                <span class="mono-text label-text"><i data-lucide="zap" class="neon-icon-small"></i> AUTOPILOT_MODE</span>
+                <label class="cyber-switch">
+                  <input type="checkbox" id="autopilot-toggle" />
+                  <span class="cyber-slider"></span>
+                </label>
+              </div>
               <div class="input-stack">
                 <div class="select-wrapper">
                   <select id="signal-location" class="cyber-input">
@@ -109,6 +172,22 @@
             </div>
           </div>
         </aside>
+
+        <!-- Center Panel: Interactive Map -->
+        <main class="panel center-panel glass-panel slide-in-bottom">
+          <div class="panel-inner map-inner">
+            <div class="panel-header slim-map-header">
+              <i data-lucide="map" class="neon-icon"></i>
+              <h2>INCIDENT_TELEMETRY_MAP</h2>
+            </div>
+            <div class="map-wrapper">
+              <div id="main-map"></div>
+              <div class="map-overlay-grid"></div>
+              <div class="radar-scan"></div>
+              <div class="vignette-overlay"></div>
+            </div>
+          </div>
+        </main>
 
         <!-- Right Panel: Intelligence -->
         <aside class="panel right-panel glass-panel slide-in-right">

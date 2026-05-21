@@ -85,6 +85,8 @@ export default function DashboardPage() {
   const [signalLocation, setSignalLocation] = useState('F-6 Markaz')
   const [isSending, setIsSending] = useState(false)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [isAutopilot, setIsAutopilot] = useState(false)
+  const [allCrises, setAllCrises] = useState([])
 
   // Chart data
   const [chartData, setChartData] = useState([0, 0, 0, 0, 0, 0, 0])
@@ -175,6 +177,7 @@ export default function DashboardPage() {
             break
           case 'CRISIS_DETECTED':
             setCrisis(msg.data)
+            if (msg.all_crises) setAllCrises(msg.all_crises)
             addAudit('AI_CORE', `THREAT DETECTED: ${msg.data.crisis_type}`)
             setNeuralLoad(99)
             setChartData([5, 12, 8, 19, 15, 20, 18])
@@ -183,10 +186,15 @@ export default function DashboardPage() {
             setActions(prev => [...prev, msg.data])
             addAudit('EXECUTION', `${msg.data.action} protocol initiated.`)
             break
+          case 'AUTOPILOT_STATUS':
+            setIsAutopilot(msg.enabled)
+            addAudit('SYS', `Autopilot mode ${msg.enabled ? 'ENABLED' : 'DISABLED'}.`)
+            break
           case 'SYSTEM_RESET':
             setCrisis(null)
             setActions([])
             setSignalsCount(0)
+            if (msg.all_crises) setAllCrises(msg.all_crises)
             setChartData([0, 0, 0, 0, 0, 0, 0])
             addAudit('SYS', 'Memory buffers flushed. State nominal.')
             break
@@ -207,6 +215,28 @@ export default function DashboardPage() {
       if (reconnectTimeout) clearTimeout(reconnectTimeout)
     }
   }, [isLoading, addAudit])
+
+  // Fetch initial data
+  useEffect(() => {
+    if (isLoading) return
+    const fetchInitialData = async () => {
+      try {
+        const apRes = await fetch(`${API_BASE}/autopilot`)
+        if (apRes.ok) {
+          const data = await apRes.json()
+          setIsAutopilot(data.enabled)
+        }
+        const histRes = await fetch(`${API_BASE}/crisis/history`)
+        if (histRes.ok) {
+          const hData = await histRes.json()
+          setAllCrises(hData.history)
+        }
+      } catch (err) {
+        console.error('Failed to fetch initial data:', err)
+      }
+    }
+    fetchInitialData()
+  }, [isLoading])
 
   // Draw chart
   useEffect(() => {
@@ -290,6 +320,18 @@ export default function DashboardPage() {
 
   const resetSystem = async () => {
     await fetch(`${API_BASE}/reset`, { method: 'POST' })
+  }
+
+  const toggleAutopilot = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/autopilot`, { method: 'POST' })
+      if (res.ok) {
+        const data = await res.json()
+        setIsAutopilot(data.enabled)
+      }
+    } catch (err) {
+      console.error('Failed to toggle autopilot:', err)
+    }
   }
 
   const handleLogout = () => {
@@ -377,16 +419,23 @@ export default function DashboardPage() {
               <button
                 className={styles.btnPrimary}
                 onClick={triggerAnalysis}
-                disabled={signalsCount === 0 || crisis !== null || isAnalyzing}
+                disabled={signalsCount === 0 || crisis !== null || isAnalyzing || isAutopilot}
               >
                 <ScanIcon className={styles.btnIcon} />
                 {isAnalyzing ? 'PROCESSING...' : 'RUN_ANALYSIS'}
               </button>
-              <button className={styles.btnGhost} onClick={resetSystem}>
+              <button className={styles.btnGhost} onClick={resetSystem} disabled={isAutopilot}>
                 <RotateIcon className={styles.btnIcon} />
                 RESET
               </button>
             </div>
+            <button
+              className={`${styles.btnAutopilot} ${isAutopilot ? styles.btnAutopilotActive : ''}`}
+              onClick={toggleAutopilot}
+            >
+              <ActivityIcon className={styles.btnIcon} />
+              {isAutopilot ? '⚡ AUTOPILOT ACTIVE' : 'AUTOPILOT MODE'}
+            </button>
           </div>
 
           {/* Swarm Cognition */}
@@ -423,7 +472,7 @@ export default function DashboardPage() {
         {/* ── Map Center ── */}
         <div className={styles.mapArea}>
           <div className={styles.mapContainer}>
-            <NexusMap crisisLocation={crisis?.location} />
+            <NexusMap allCrises={allCrises} latestCrisisLocation={crisis?.location} />
           </div>
           <div className={styles.mapGridOverlay} />
           <div className={styles.radarScan} />
@@ -433,28 +482,39 @@ export default function DashboardPage() {
         {/* ── Right Panel ── */}
         <aside className={`${styles.panel} ${styles.rightPanel}`}>
           {/* Threat Intelligence */}
-          <div>
+          <div style={{ display: 'flex', flexDirection: 'column', maxHeight: '45vh' }}>
             <div className={styles.panelHeader}>
               <ShieldAlertIcon className={styles.panelIcon} />
-              <h2 className={styles.panelTitle}>THREAT_INTELLIGENCE</h2>
+              <h2 className={styles.panelTitle}>THREAT_INTELLIGENCE_HISTORY</h2>
             </div>
-            {crisis ? (
-              <div className={styles.intelCard}>
-                <span className={styles.sevTag}>{crisis.severity || 'CRITICAL'}</span>
-                <h4 className={styles.intelType}>{crisis.crisis_type}</h4>
-                <div className={styles.intelMeta}>
-                  <span>LOC: {crisis.location}</span>
-                  <span>CONFIDENCE: {crisis.confidence || 95}%</span>
+            
+            <div style={{ overflowY: 'auto', flex: 1, paddingRight: '4px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {allCrises && allCrises.length > 0 ? (
+                [...allCrises].reverse().map((c, i) => (
+                  <div key={i} className={styles.intelCard} style={{ opacity: i === 0 && crisis ? 1 : 0.7, borderLeft: i === 0 && crisis ? '3px solid #ff003c' : '3px solid #555' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <span className={styles.sevTag} style={{ background: i === 0 && crisis ? 'rgba(255, 0, 60, 0.15)' : 'rgba(100, 100, 100, 0.15)', color: i === 0 && crisis ? '#ff003c' : '#aaa' }}>
+                        {c.severity || 'CRITICAL'}
+                      </span>
+                      <span style={{ fontSize: '10px', color: '#888', fontFamily: 'monospace' }}>{c.detected_at}</span>
+                    </div>
+                    <h4 className={styles.intelType} style={{ fontSize: '13px', color: i === 0 && crisis ? '#fff' : '#ccc' }}>{c.crisis_type}</h4>
+                    <div className={styles.intelMeta}>
+                      <span>LOC: {c.location}</span>
+                    </div>
+                    {i === 0 && crisis && (
+                      <p className={styles.intelReason} style={{ fontSize: '11px', marginTop: '6px' }}>&gt; {c.reasoning}</p>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <div className={styles.hudEmpty}>
+                  <ShieldIcon className={styles.hudEmptyIcon} />
+                  <p className={styles.hudEmptyText}>NO_ACTIVE_THREATS</p>
+                  <div className={styles.scanLineSmall} />
                 </div>
-                <p className={styles.intelReason}>&gt; {crisis.reasoning}</p>
-              </div>
-            ) : (
-              <div className={styles.hudEmpty}>
-                <ShieldIcon className={styles.hudEmptyIcon} />
-                <p className={styles.hudEmptyText}>NO_ACTIVE_THREATS</p>
-                <div className={styles.scanLineSmall} />
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           {/* System Pulse */}

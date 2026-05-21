@@ -51,8 +51,20 @@ export const signalAPI = {
     const response = await api.post('/analyze');
     return response.data;
   },
+  getRandomSignal: async (category) => {
+    const response = await api.get(`/signals/random/${category}`);
+    return response.data;
+  },
   resetState: async () => {
     const response = await api.post('/reset');
+    return response.data;
+  },
+  toggleAutopilot: async () => {
+    const response = await api.post('/autopilot');
+    return response.data;
+  },
+  getAutopilotStatus: async () => {
+    const response = await api.get('/autopilot');
     return response.data;
   }
 };

@@ -13,10 +13,13 @@ let state = {
   marker: null,
   towers: {},
   chart: null,
-  chartData: [0, 0, 0, 0, 0, 0, 0]
+  chartData: [0, 0, 0, 0, 0, 0, 0],
+  isSignUpMode: false,
+  websocket: null
 }
 
 const el = {
+  // Main HUD Elements
   currentTime: document.getElementById('current-time'),
   backendStatus: document.getElementById('backend-status'),
   statusBadge: document.getElementById('status-badge-container'),
@@ -30,29 +33,222 @@ const el = {
   actionLog: document.getElementById('action-log'),
   systemAudit: document.getElementById('system-audit'),
   neuralLoadVal: document.getElementById('neural-load-val'),
-  neuralLoadBar: document.getElementById('neural-load-bar')
+  neuralLoadBar: document.getElementById('neural-load-bar'),
+  
+  // Auth Elements
+  authPortal: document.getElementById('auth-portal'),
+  authForm: document.getElementById('auth-form'),
+  authEmail: document.getElementById('auth-email'),
+  authPassword: document.getElementById('auth-password'),
+  authTogglePass: document.getElementById('auth-toggle-pass'),
+  authSubmitBtn: document.getElementById('btn-auth-submit'),
+  authSubmitLabel: document.getElementById('auth-submit-label'),
+  authSwitchBtn: document.getElementById('btn-auth-switch'),
+  authSwitchPrompt: document.getElementById('auth-switch-prompt'),
+  authErrorBox: document.getElementById('auth-error-box'),
+  authErrorMsg: document.getElementById('auth-error-msg'),
+  
+  // Operator Header Elements
+  operatorInfoBadge: document.getElementById('operator-info-badge'),
+  operatorEmail: document.getElementById('operator-email'),
+  btnLogout: document.getElementById('btn-logout')
+}
+
+// Token Storage Helpers
+function getToken() {
+  return localStorage.getItem('ciro_nexus_token')
+}
+
+function setToken(token) {
+  localStorage.setItem('ciro_nexus_token', token)
+}
+
+function removeToken() {
+  localStorage.removeItem('ciro_nexus_token')
+}
+
+// Wrapper for fetch requests with authorization headers
+async function fetchWithAuth(url, options = {}) {
+  const token = getToken()
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(options.headers || {})
+  }
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+  return fetch(url, { ...options, headers })
 }
 
 function init() {
   updateTime()
   setInterval(updateTime, 1000)
-  
-  initMap()
-  initChart()
-  setupWebSocket()
 
+  // Wire up Auth event listeners
+  el.authForm.onsubmit = handleAuthSubmit
+  el.authSwitchBtn.onclick = toggleAuthMode
+  el.authTogglePass.onclick = togglePasswordVisibility
+  el.btnLogout.onclick = logout
+
+  // Check auth state
+  if (getToken()) {
+    checkTokenValidity()
+  } else {
+    showAuthGate()
+  }
+}
+
+async function checkTokenValidity() {
+  try {
+    const res = await fetchWithAuth(`${API_BASE}/auth/me`)
+    if (res.ok) {
+      const user = await res.json()
+      onAuthSuccess(user.email)
+    } else {
+      removeToken()
+      showAuthGate()
+    }
+  } catch (err) {
+    // If backend is offline but token exists, still allow showing HUD (with offline state)
+    console.error("Token validation error:", err)
+    onAuthSuccess("Operator")
+  }
+}
+
+function showAuthGate() {
+  el.authPortal.classList.remove('hidden')
+  el.operatorInfoBadge.classList.add('hidden')
+  
+  // Clean fields
+  el.authEmail.value = ''
+  el.authPassword.value = ''
+  el.authErrorBox.classList.add('hidden')
+}
+
+function toggleAuthMode() {
+  state.isSignUpMode = !state.isSignUpMode
+  if (state.isSignUpMode) {
+    el.authSubmitLabel.textContent = 'INITIALIZE ACCOUNT'
+    el.authSwitchPrompt.textContent = 'Existing operator?'
+    el.authSwitchBtn.textContent = 'ACCESS GATEWAY'
+  } else {
+    el.authSubmitLabel.textContent = 'AUTHORIZE_SESSION'
+    el.authSwitchPrompt.textContent = 'No authorized profile?'
+    el.authSwitchBtn.textContent = 'INITIALIZE ACCOUNT'
+  }
+  el.authErrorBox.classList.add('hidden')
+}
+
+function togglePasswordVisibility() {
+  if (el.authPassword.type === 'password') {
+    el.authPassword.type = 'text'
+    el.authTogglePass.textContent = 'HIDE'
+  } else {
+    el.authPassword.type = 'password'
+    el.authTogglePass.textContent = 'SHOW'
+  }
+}
+
+async function handleAuthSubmit(e) {
+  e.preventDefault()
+  el.authErrorBox.classList.add('hidden')
+  el.authSubmitBtn.disabled = true
+  
+  const originalHtml = el.authSubmitBtn.innerHTML
+  el.authSubmitBtn.innerHTML = `<span class="btn-content"><i data-lucide="loader"></i> CONNECTING...</span>`
+  if (window.lucide) window.lucide.createIcons()
+
+  const email = el.authEmail.value.trim()
+  const password = el.authPassword.value
+
+  const endpoint = state.isSignUpMode ? '/auth/register' : '/auth/login'
+
+  try {
+    const res = await fetch(`${API_BASE}${endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
+    })
+
+    const data = await res.json()
+    if (!res.ok) {
+      throw new Error(data.detail || 'Authorization failed')
+    }
+
+    setToken(data.access_token)
+    onAuthSuccess(email)
+  } catch (err) {
+    el.authErrorMsg.textContent = err.message
+    el.authErrorBox.classList.remove('hidden')
+  } finally {
+    el.authSubmitBtn.disabled = false
+    el.authSubmitBtn.innerHTML = originalHtml
+    if (window.lucide) window.lucide.createIcons()
+  }
+}
+
+function onAuthSuccess(email) {
+  el.authPortal.classList.add('hidden')
+  el.operatorEmail.textContent = email
+  el.operatorInfoBadge.classList.remove('hidden')
+
+  // Initialize main app features
+  initDashboard()
+}
+
+function initDashboard() {
+  // Wire up core dashboard elements
   el.btnSendSignal.onclick = sendSignal
   el.btnAnalyze.onclick = triggerAnalysis
   el.btnReset.onclick = resetSystem
 
+  // Only init once
+  if (!state.map) {
+    initMap()
+    // Force leaflet recalculation after layout reveals
+    setTimeout(() => {
+      if (state.map) state.map.invalidateSize()
+    }, 200)
+  }
+  
+  if (!state.chart) {
+    initChart()
+  }
+
+  // Hook up WebSocket
+  setupWebSocket()
+
   // Randomize neural load for visual flair
-  setInterval(() => {
-    if(!state.crisis) {
-      const load = Math.floor(Math.random() * 20) + 30;
-      el.neuralLoadVal.textContent = `${load}%`;
-      el.neuralLoadBar.style.width = `${load}%`;
-    }
-  }, 2000)
+  if (!state.neuralLoadInterval) {
+    state.neuralLoadInterval = setInterval(() => {
+      if (!state.crisis) {
+        const load = Math.floor(Math.random() * 20) + 30;
+        el.neuralLoadVal.textContent = `${load}%`;
+        el.neuralLoadBar.style.width = `${load}%`;
+      }
+    }, 2000)
+  }
+}
+
+function logout() {
+  removeToken()
+  
+  // Close WebSocket
+  if (state.websocket) {
+    state.websocket.close()
+    state.websocket = null
+  }
+
+  // Clear intervals
+  if (state.neuralLoadInterval) {
+    clearInterval(state.neuralLoadInterval)
+    state.neuralLoadInterval = null
+  }
+
+  // Reset local state variables
+  resetLocalState()
+
+  showAuthGate()
 }
 
 function initMap() {
@@ -98,7 +294,10 @@ function initChart() {
 }
 
 function setupWebSocket() {
+  if (state.websocket) return // already active
+
   const socket = new WebSocket(WS_URL)
+  state.websocket = socket
 
   socket.onopen = () => {
     el.backendStatus.textContent = 'SYSTEM_ONLINE'
@@ -136,7 +335,12 @@ function setupWebSocket() {
     el.backendStatus.textContent = 'LINK_OFFLINE'
     el.statusDot.className = 'dot red'
     addAudit('SYS_ERR', 'Nexus uplink lost. Reconnecting...')
-    setTimeout(setupWebSocket, 3000)
+    
+    state.websocket = null
+    // Reconnect only if still logged in
+    if (getToken()) {
+      setTimeout(setupWebSocket, 3000)
+    }
   }
 }
 
@@ -194,7 +398,7 @@ function resetLocalState() {
   state.crisis = null
   state.actions = []
   if (state.marker) state.marker.remove()
-  state.map.setView([33.6844, 73.0479], 13)
+  if (state.map) state.map.setView([33.6844, 73.0479], 13)
   
   document.body.classList.remove('threat-active')
   el.statusBadge.classList.remove('alert-mode')
@@ -205,12 +409,14 @@ function resetLocalState() {
 
   // Reset chart
   state.chartData = [0, 0, 0, 0, 0, 0, 0]
-  state.chart.data.datasets[0].borderColor = '#00f0ff'
-  let gradient = state.chart.ctx.createLinearGradient(0, 0, 0, 400);
-  gradient.addColorStop(0, 'rgba(0, 240, 255, 0.5)');   
-  gradient.addColorStop(1, 'rgba(0, 240, 255, 0)');
-  state.chart.data.datasets[0].backgroundColor = gradient
-  state.chart.update()
+  if (state.chart) {
+    state.chart.data.datasets[0].borderColor = '#00f0ff'
+    let gradient = state.chart.ctx.createLinearGradient(0, 0, 0, 400);
+    gradient.addColorStop(0, 'rgba(0, 240, 255, 0.5)');   
+    gradient.addColorStop(1, 'rgba(0, 240, 255, 0)');
+    state.chart.data.datasets[0].backgroundColor = gradient
+    state.chart.update()
+  }
 
   // Reset load
   el.neuralLoadVal.style.color = '';
@@ -228,7 +434,7 @@ function addAudit(tag, text) {
 function updatePulse() {
   state.chartData.shift()
   state.chartData.push(Math.floor(Math.random() * 8) + 8)
-  state.chart.update()
+  if (state.chart) state.chart.update()
 }
 
 function updateTime() {
@@ -246,9 +452,8 @@ async function sendSignal() {
   if (window.lucide) window.lucide.createIcons()
 
   try {
-    await fetch(`${API_BASE}/signals`, {
+    await fetchWithAuth(`${API_BASE}/signals`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify([{ source: 'CONSOLE', text, location: el.signalLocation.value }])
     })
     el.signalText.value = ''
@@ -265,14 +470,14 @@ async function triggerAnalysis() {
   btn.innerHTML = `<span class="btn-content"><i data-lucide="cpu"></i> PROCESSING...</span>`
   if (window.lucide) window.lucide.createIcons()
 
-  await fetch(`${API_BASE}/analyze`, { method: 'POST' })
+  await fetchWithAuth(`${API_BASE}/analyze`, { method: 'POST' })
   
   btn.innerHTML = originalHtml
   if (window.lucide) window.lucide.createIcons()
 }
 
 async function resetSystem() {
-  await fetch(`${API_BASE}/reset`, { method: 'POST' })
+  await fetchWithAuth(`${API_BASE}/reset`, { method: 'POST' })
 }
 
 function render() {

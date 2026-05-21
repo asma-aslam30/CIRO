@@ -3,8 +3,16 @@ from typing import List
 from models.signal import Signal
 from database.state import state
 from agents.antigravity import orchestrator
+from mock_data import generator
 
 router = APIRouter()
+
+@router.get("/signals/random/{category}")
+async def get_random_signal(category: str):
+    signal = generator.generate_random(category)
+    if not signal:
+        raise HTTPException(status_code=400, detail="Invalid category")
+    return signal
 
 @router.post("/signals")
 async def receive_signals(signals: List[Signal]):

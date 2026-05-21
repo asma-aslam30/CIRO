@@ -22,13 +22,15 @@ import Animated, {
 import { ShieldCheck, Eye, EyeOff } from 'lucide-react-native';
 import { theme } from '../lib/theme';
 
-export default function LoginScreen({ navigation, route }) {
-  const [email, setEmail] = useState('admin@ciro.nexus');
-  const [password, setPassword] = useState('NexusAdmin2026');
+export default function RegisterScreen({ navigation, route }) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [focusedField, setFocusedField] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Scanline animation matching the web app
   const scanLinePos = useSharedValue(0);
@@ -46,16 +48,25 @@ export default function LoginScreen({ navigation, route }) {
     opacity: scanLinePos.value < 0.05 || scanLinePos.value > 0.95 ? 0 : 0.6,
   }));
 
-  const handleLogin = async () => {
+  const handleRegister = async () => {
+    if (!email || !password || !confirmPassword) {
+      setError('Please fill in all authorization fields');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError('Credentials mismatched: Passwords do not match');
+      return;
+    }
+
     setLoading(true);
     setError('');
     try {
-      await authAPI.login(email, password);
+      await authAPI.register(email, password);
       if (route.params?.onLogin) {
         route.params.onLogin();
       }
     } catch (err) {
-      setError(err.response?.data?.detail || 'Authorization failed. Check logs.');
+      setError(err.response?.data?.detail || 'Operator registration failed');
     } finally {
       setLoading(false);
     }
@@ -77,13 +88,13 @@ export default function LoginScreen({ navigation, route }) {
 
             {/* Shield Check logo */}
             <View style={styles.logoContainer}>
-              <ShieldCheck color={theme.colors.primary} size={48} style={styles.logoIcon} />
+              <ShieldCheck color={theme.colors.accent} size={48} style={styles.logoIcon} />
             </View>
 
             <Text style={styles.title}>
-              CIRO <Text style={styles.neonText}>NEXUS</Text>
+              OPERATOR <Text style={styles.neonText}>SIGNUP</Text>
             </Text>
-            <Text style={styles.subtitle}>Mobile Field Authorization</Text>
+            <Text style={styles.subtitle}>Register Field Terminal</Text>
 
             {error ? (
               <View style={styles.errorContainer}>
@@ -137,14 +148,43 @@ export default function LoginScreen({ navigation, route }) {
               </TouchableOpacity>
             </View>
 
+            {/* Confirm Password Field */}
+            <Text style={styles.fieldLabel}>CONFIRM SECURE PASSPHRASE</Text>
+            <View style={styles.passwordContainer}>
+              <TextInput
+                style={[
+                  styles.input,
+                  { flex: 1, marginBottom: 0 },
+                  focusedField === 'confirmPassword' && styles.inputFocused
+                ]}
+                placeholder="••••••••••••"
+                placeholderTextColor={theme.colors.dim}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                secureTextEntry={!showConfirmPassword}
+                onFocus={() => setFocusedField('confirmPassword')}
+                onBlur={() => setFocusedField(null)}
+              />
+              <TouchableOpacity 
+                style={styles.eyeButton} 
+                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+              >
+                {showConfirmPassword ? (
+                  <EyeOff color={theme.colors.primary} size={20} />
+                ) : (
+                  <Eye color={theme.colors.primary} size={20} />
+                )}
+              </TouchableOpacity>
+            </View>
+
             {/* Authenticate Button */}
             <TouchableOpacity 
-              onPress={handleLogin} 
+              onPress={handleRegister} 
               disabled={loading}
               activeOpacity={0.8}
             >
               <LinearGradient
-                colors={loading ? [theme.colors.dim, theme.colors.dim] : [theme.colors.primary, theme.colors.accent]}
+                colors={loading ? [theme.colors.dim, theme.colors.dim] : [theme.colors.accent, theme.colors.primary]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.button}
@@ -152,17 +192,17 @@ export default function LoginScreen({ navigation, route }) {
                 {loading ? (
                   <ActivityIndicator color={theme.colors.bgDark} />
                 ) : (
-                  <Text style={styles.buttonText}>ESTABLISH CONNECTION</Text>
+                  <Text style={styles.buttonText}>PROVISION OPERATOR</Text>
                 )}
               </LinearGradient>
             </TouchableOpacity>
 
             <TouchableOpacity 
               style={styles.linkButton} 
-              onPress={() => navigation.navigate('Register')}
+              onPress={() => navigation.navigate('Login')}
             >
               <Text style={styles.linkText}>
-                No field credentials? <Text style={styles.linkTextBold}>Create operator account</Text>
+                Already registered? <Text style={styles.linkTextBold}>Operator login</Text>
               </Text>
             </TouchableOpacity>
           </Animated.View>
@@ -192,8 +232,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 2,
-    backgroundColor: theme.colors.primary,
-    shadowColor: theme.colors.primary,
+    backgroundColor: theme.colors.accent,
+    shadowColor: theme.colors.accent,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.8,
     shadowRadius: 5,
@@ -204,7 +244,7 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   logoIcon: {
-    shadowColor: theme.colors.primary,
+    shadowColor: theme.colors.accent,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.6,
     shadowRadius: 10,
@@ -212,14 +252,14 @@ const styles = StyleSheet.create({
   title: {
     color: '#ffffff',
     fontFamily: theme.fonts.bold,
-    fontSize: 32,
+    fontSize: 28,
     textAlign: 'center',
-    letterSpacing: 4,
+    letterSpacing: 3,
     marginBottom: 4,
   },
   neonText: {
-    color: theme.colors.primary,
-    textShadowColor: 'rgba(0, 240, 255, 0.8)',
+    color: theme.colors.accent,
+    textShadowColor: 'rgba(176, 38, 255, 0.8)',
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 10,
   },
@@ -229,7 +269,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     textAlign: 'center',
     letterSpacing: 3,
-    marginBottom: 35,
+    marginBottom: 30,
     textTransform: 'uppercase',
   },
   fieldLabel: {
@@ -245,14 +285,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 8,
     color: theme.colors.text,
-    padding: 15,
+    padding: 14,
     fontFamily: theme.fonts.semibold,
     fontSize: 14,
-    marginBottom: 20,
+    marginBottom: 18,
   },
   inputFocused: {
-    borderColor: theme.colors.primary,
-    shadowColor: theme.colors.primary,
+    borderColor: theme.colors.accent,
+    shadowColor: theme.colors.accent,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.4,
     shadowRadius: 8,
@@ -264,7 +304,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
     borderWidth: 1,
     borderRadius: 8,
-    marginBottom: 25,
+    marginBottom: 18,
     paddingRight: 10,
   },
   eyeButton: {
@@ -274,8 +314,8 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 8,
     alignItems: 'center',
-    marginTop: 10,
-    shadowColor: theme.colors.primary,
+    marginTop: 15,
+    shadowColor: theme.colors.accent,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.6,
     shadowRadius: 10,
@@ -313,7 +353,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   linkTextBold: {
-    color: theme.colors.primary,
+    color: theme.colors.accent,
     fontFamily: theme.fonts.semibold,
   }
 });

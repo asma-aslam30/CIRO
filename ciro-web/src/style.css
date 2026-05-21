@@ -27,7 +27,35 @@ body, html {
   overflow: hidden;
 }
 
-/* Background Layers */
+/* Background/Center Map Layers */
+.center-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.map-inner {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.slim-map-header {
+  margin-bottom: 0.75rem !important;
+  flex-shrink: 0;
+}
+
+.map-wrapper {
+  position: relative;
+  flex: 1;
+  border: 1px solid var(--nexus-border);
+  border-radius: 6px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.4);
+}
+
 #main-map {
   position: absolute;
   top: 0; left: 0;
@@ -65,8 +93,8 @@ body.threat-active #main-map {
 .radar-scan {
   position: absolute;
   top: 50%; left: 50%;
-  width: 200vw; height: 200vw;
-  margin-top: -100vw; margin-left: -100vw;
+  width: 200%; height: 200%;
+  margin-top: -100%; margin-left: -100%;
   background: conic-gradient(from 0deg, transparent 70%, rgba(0, 240, 255, 0.05) 100%);
   z-index: 2;
   animation: radarSpin 8s linear infinite;
@@ -430,4 +458,230 @@ select.cyber-input { appearance: none; cursor: pointer; }
   10% { opacity: 0.5; }
   90% { opacity: 0.5; }
   100% { top: 100%; opacity: 0; }
+}
+
+/* Helper Classes */
+.hidden {
+  display: none !important;
+}
+
+/* Authentication Portal Styles */
+.auth-portal-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  background: radial-gradient(circle, rgba(2, 2, 5, 0.95) 0%, rgba(5, 5, 15, 0.98) 100%);
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 1.5rem;
+  transition: opacity 0.5s ease, visibility 0.5s ease;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 440px;
+  padding: 2.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  box-shadow: 0 16px 64px rgba(0, 0, 0, 0.8), 0 0 40px rgba(0, 240, 255, 0.05);
+}
+
+/* Corner Accents */
+.corner-accent {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border: 2px solid transparent;
+  pointer-events: none;
+}
+.corner-accent.top-left {
+  top: 0; left: 0;
+  border-top-color: var(--nexus-primary);
+  border-left-color: var(--nexus-primary);
+}
+.corner-accent.top-right {
+  top: 0; right: 0;
+  border-top-color: var(--nexus-primary);
+  border-right-color: var(--nexus-primary);
+}
+.corner-accent.bottom-left {
+  bottom: 0; left: 0;
+  border-bottom-color: var(--nexus-primary);
+  border-left-color: var(--nexus-primary);
+}
+.corner-accent.bottom-right {
+  bottom: 0; right: 0;
+  border-bottom-color: var(--nexus-primary);
+  border-right-color: var(--nexus-primary);
+}
+
+.auth-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.5rem;
+}
+
+.auth-header .logo-icon {
+  width: 48px;
+  height: 48px;
+  color: var(--nexus-primary);
+  margin-bottom: 0.5rem;
+}
+
+.auth-title {
+  font-size: 1.75rem;
+  font-weight: 300;
+  letter-spacing: 6px;
+  color: var(--nexus-text);
+  margin: 0;
+}
+
+.auth-title .neon-text {
+  font-weight: 900;
+  color: var(--nexus-primary);
+  text-shadow: 0 0 10px var(--nexus-border-glow);
+}
+
+.auth-subtitle {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 3px;
+  color: var(--nexus-dim);
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.input-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.input-wrapper label {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 2px;
+  color: var(--nexus-dim);
+}
+
+.password-input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.pass-toggle-btn {
+  position: absolute;
+  right: 0.75rem;
+  background: transparent;
+  border: none;
+  color: var(--nexus-dim);
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  cursor: pointer;
+  outline: none;
+}
+
+.pass-toggle-btn:hover {
+  color: var(--nexus-primary);
+}
+
+.auth-toggle-mode {
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--nexus-text);
+}
+
+.auth-toggle-mode p {
+  color: var(--nexus-dim);
+}
+
+.switch-link-btn {
+  background: transparent;
+  border: none;
+  color: var(--nexus-primary);
+  font-weight: 700;
+  font-family: var(--font-main);
+  cursor: pointer;
+  margin-left: 0.25rem;
+  outline: none;
+}
+
+.switch-link-btn:hover {
+  text-decoration: underline;
+  text-shadow: 0 0 5px var(--nexus-primary);
+}
+
+.error-container {
+  background: rgba(255, 0, 60, 0.1);
+  border: 1px solid rgba(255, 0, 60, 0.3);
+  border-radius: 4px;
+  padding: 0.75rem;
+  color: var(--nexus-alert);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  text-align: center;
+  box-shadow: 0 0 10px rgba(255, 0, 60, 0.1);
+}
+
+.error-prefix {
+  font-weight: bold;
+  margin-right: 0.5rem;
+}
+
+.auth-system-status {
+  margin-top: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.4);
+  letter-spacing: 1px;
+}
+
+/* Header Operator Info Badge */
+.operator-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(0, 240, 255, 0.05);
+  border: 1px solid rgba(0, 240, 255, 0.15);
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+
+.operator-badge .neon-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.logout-btn {
+  background: rgba(255, 0, 60, 0.15);
+  border: 1px solid rgba(255, 0, 60, 0.4);
+  color: var(--nexus-alert);
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: bold;
+  padding: 0.2rem 0.6rem;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.logout-btn:hover {
+  background: var(--nexus-alert);
+  color: #fff;
+  box-shadow: 0 0 10px rgba(255, 0, 60, 0.5);
 }
