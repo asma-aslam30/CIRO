@@ -1,0 +1,106 @@
+name: Deploy ciro-web-next to Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'ciro-web-next/**'
+      - '.github/workflows/deploy-frontend.yml'
+
+env:
+  GCP_REGION: us-central1
+  SERVICE_NAME: ciro-web-next
+  IMAGE: us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/ciro-images/ciro-web-next
+  BACKEND_SERVICE: ciro-backend
+
+jobs:
+  deploy:
+    name: Build & Deploy Frontend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+
+      - name: Create Artifact Registry repo (if not exists)
+        run: |
+          gcloud artifacts repositories describe ciro-images \
+            --location=${{ env.GCP_REGION }} \
+            --project=${{ secrets.GCP_PROJECT_ID }} \
+            --quiet 2>/dev/null || \
+          gcloud artifacts repositories create ciro-images \
+            --repository-format=docker \
+            --location=${{ env.GCP_REGION }} \
+            --project=${{ secrets.GCP_PROJECT_ID }} \
+            --quiet
+
+      - name: Get backend URL
+        id: backend
+        run: |
+          URL=$(gcloud run services describe ${{ env.BACKEND_SERVICE }} \
+            --platform=managed \
+            --region=${{ env.GCP_REGION }} \
+            --project=${{ secrets.GCP_PROJECT_ID }} \
+            --format="value(status.url)" 2>/dev/null || echo "")
+          if [ -z "$URL" ]; then
+            echo "⚠️  Backend not deployed yet. Using fallback URL."
+            URL="https://ciro-backend-placeholder.run.app"
+          fi
+          echo "url=$URL" >> $GITHUB_OUTPUT
+          echo "Backend URL: $URL"
+
+      - name: Build Docker image
+        run: |
+          docker build \
+            --build-arg NEXT_PUBLIC_API_URL=${{ steps.backend.outputs.url }}/api \
+            -t ${{ env.IMAGE }}:${{ github.sha }} \
+            -t ${{ env.IMAGE }}:latest \
+            ./ciro-web-next
+
+      - name: Push Docker image
+        run: |
+          docker push ${{ env.IMAGE }}:${{ github.sha }}
+          docker push ${{ env.IMAGE }}:latest
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy ${{ env.SERVICE_NAME }} \
+            --image=${{ env.IMAGE }}:${{ github.sha }} \
+            --platform=managed \
+            --region=${{ env.GCP_REGION }} \
+            --project=${{ secrets.GCP_PROJECT_ID }} \
+            --allow-unauthenticated \
+            --quiet
+
+      - name: Update backend CORS with frontend URL
+        run: |
+          FRONTEND_URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} \
+            --platform=managed \
+            --region=${{ env.GCP_REGION }} \
+            --project=${{ secrets.GCP_PROJECT_ID }} \
+            --format="value(status.url)")
+
+          echo "Frontend URL: $FRONTEND_URL"
+
+          # Update backend ALLOWED_ORIGINS to include this frontend
+          gcloud run services update ${{ env.BACKEND_SERVICE }} \
+            --platform=managed \
+            --region=${{ env.GCP_REGION }} \
+            --project=${{ secrets.GCP_PROJECT_ID }} \
+            --set-env-vars="ALLOWED_ORIGINS=$FRONTEND_URL" \
+            --quiet
+
+          echo "✅ Frontend deployed at: $FRONTEND_URL"
+          echo "✅ Backend CORS updated to allow: $FRONTEND_URL"

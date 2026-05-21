@@ -2,7 +2,7 @@
 // CIRO NEXUS V2 — Auth Utilities
 // ═══════════════════════════════════════════════════
 
-export const API_BASE = "http://localhost:8000/api";
+export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
 
 const TOKEN_KEY = "ciro_nexus_token";
 

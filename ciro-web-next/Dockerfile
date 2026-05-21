@@ -7,10 +7,10 @@ RUN npm ci
 
 COPY . .
 
-# We allow NEXT_PUBLIC variables to be passed at build time or runtime.
-# For Cloud Run, runtime vars aren't injected into statically optimized pages
-# unless they are explicitly read in getServerSideProps, but since this is
-# a simple dashboard, build-time args are usually safer for static builds.
+# Accept backend URL as build argument so Next.js inlines it at build time
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+
 RUN npm run build
 
 # Production Stage
