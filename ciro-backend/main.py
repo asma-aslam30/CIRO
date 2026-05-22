@@ -1,4 +1,5 @@
 import os
+import asyncio
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 # Deployment v2.7.0 - WebSocket connection fix
@@ -68,14 +69,29 @@ async def websocket_endpoint(websocket: WebSocket):
         return
     
     # Connect to manager
-    await manager.connect(websocket)
+    manager.active_connections.append(websocket)
     try:
+        # Keep connection alive - don't require messages
         while True:
-            data = await websocket.receive_text()
-            logger.debug(f"WebSocket received: {data}")
+            try:
+                # Wait for messages but don't require them
+                data = await asyncio.wait_for(websocket.receive_text(), timeout=30.0)
+                logger.debug(f"WebSocket received: {data}")
+            except asyncio.TimeoutError:
+                # Send a ping to keep connection alive
+                try:
+                    await websocket.send_json({"type": "PING"})
+                except:
+                    break
+            except Exception as e:
+                logger.debug(f"WebSocket receive error: {e}")
+                break
     except Exception as e:
-        logger.info(f"WebSocket disconnected: {e}")
-        manager.disconnect(websocket)
+        logger.info(f"WebSocket error: {e}")
+    finally:
+        if websocket in manager.active_connections:
+            manager.active_connections.remove(websocket)
+        logger.info(f"WebSocket disconnected from {websocket.client}")
 
 
 @app.get("/")
