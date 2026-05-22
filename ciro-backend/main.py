@@ -36,16 +36,23 @@ def get_allowed_origins() -> list:
     """Read CORS origins from ALLOWED_ORIGINS env var (comma-separated).
     Falls back to localhost defaults for local development."""
     raw = os.environ.get("ALLOWED_ORIGINS", "")
+    origins = []
+    
     if raw.strip():
-        return [o.strip() for o in raw.split(",") if o.strip()]
-    return [
+        origins = [o.strip() for o in raw.split(",") if o.strip()]
+    
+    # Always include localhost for development
+    origins.extend([
         "http://localhost:8081",
         "http://localhost:3000",
         "http://localhost:5173",
         "http://127.0.0.1:8081",
         "http://127.0.0.1:3000",
         "http://127.0.0.1:5173",
-    ]
+    ])
+    
+    logger.info(f"✅ CORS allowed origins: {origins}")
+    return origins
 
 
 # Allow web frontend to connect

@@ -73,6 +73,15 @@ jobs:
 
       - name: Deploy to Cloud Run
         run: |
+          # Get the frontend URL from Cloud Run
+          FRONTEND_URL=$(gcloud run services describe ciro-web-next \
+            --platform=managed \
+            --region=${{ env.GCP_REGION }} \
+            --project=${{ secrets.GCP_PROJECT_ID }} \
+            --format="value(status.url)" 2>/dev/null || echo "https://ciro-web-next-831760955449.us-central1.run.app")
+          
+          echo "Deploying backend with CORS for: $FRONTEND_URL"
+          
           gcloud run deploy ${{ env.SERVICE_NAME }} \
             --image=${{ env.IMAGE }}:${{ github.sha }} \
             --platform=managed \
@@ -83,7 +92,7 @@ jobs:
             --memory=512Mi \
             --cpu=1 \
             --timeout=3600 \
-            --set-env-vars="ALLOWED_ORIGINS=https://ciro-web-next-831760955449.us-central1.run.app" \
+            --set-env-vars="ALLOWED_ORIGINS=$FRONTEND_URL" \
             --quiet
 
       - name: Print deployed URL
