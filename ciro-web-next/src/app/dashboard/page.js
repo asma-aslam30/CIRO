@@ -507,7 +507,7 @@ export default function DashboardPage() {
               <h2 className={styles.panelTitle}>THREAT_INTELLIGENCE_HISTORY</h2>
             </div>
             
-            <div style={{ overflowY: 'auto', flex: 1, paddingRight: '4px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div className={styles.threatHistoryContainer}>
               {allCrises && allCrises.length > 0 ? (
                 [...allCrises].reverse().map((c, i) => (
                   <div key={i} className={styles.intelCard} style={{ opacity: i === 0 && crisis ? 1 : 0.7, borderLeft: i === 0 && crisis ? '3px solid #ff003c' : '3px solid #555' }}>

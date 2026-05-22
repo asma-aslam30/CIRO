@@ -547,6 +547,34 @@
 }
 
 /* ── Threat Intelligence ────────────────────────────── */
+.threatHistoryContainer {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.threatHistoryContainer::-webkit-scrollbar {
+  width: 6px;
+}
+
+.threatHistoryContainer::-webkit-scrollbar-track {
+  background: rgba(0, 240, 255, 0.05);
+  border-radius: 3px;
+}
+
+.threatHistoryContainer::-webkit-scrollbar-thumb {
+  background: rgba(0, 240, 255, 0.3);
+  border-radius: 3px;
+  transition: background 0.3s ease;
+}
+
+.threatHistoryContainer::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 240, 255, 0.5);
+}
+
 .hudEmpty {
   display: flex;
   flex-direction: column;
