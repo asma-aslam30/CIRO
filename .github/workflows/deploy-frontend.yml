@@ -70,15 +70,17 @@ jobs:
             --format="value(status.url)" 2>/dev/null || echo "")
           if [ -z "$URL" ]; then
             echo "⚠️  Backend not deployed yet. Using fallback URL."
-            URL="https://ciro-backend-placeholder.run.app"
+            URL="https://ciro-backend-avlzdriwhq-uc.a.run.app"
           fi
           echo "url=$URL" >> $GITHUB_OUTPUT
           echo "Backend URL: $URL"
 
       - name: Build Docker image
         run: |
+          BACKEND_URL="${{ steps.backend.outputs.url }}"
+          echo "Building with Backend URL: $BACKEND_URL"
           docker build \
-            --build-arg NEXT_PUBLIC_API_URL=${{ steps.backend.outputs.url }}/api \
+            --build-arg NEXT_PUBLIC_API_URL=$BACKEND_URL/api \
             -t ${{ env.IMAGE }}:${{ github.sha }} \
             -t ${{ env.IMAGE }}:latest \
             ./ciro-web-next
@@ -123,3 +125,17 @@ jobs:
 
           echo "✅ Frontend deployed at: $FRONTEND_URL"
           echo "✅ Backend CORS updated to allow: $FRONTEND_URL"
+
+      - name: Update frontend with backend URL
+        continue-on-error: true
+        run: |
+          BACKEND_URL="${{ steps.backend.outputs.url }}"
+          
+          gcloud run services update ${{ env.SERVICE_NAME }} \
+            --platform=managed \
+            --region=${{ env.GCP_REGION }} \
+            --project=${{ secrets.GCP_PROJECT_ID }} \
+            --set-env-vars="NEXT_PUBLIC_API_URL=$BACKEND_URL/api" \
+            --quiet 2>/dev/null || echo "⚠️  Could not update frontend environment variables."
+          
+          echo "✅ Frontend updated with backend URL: $BACKEND_URL/api"
