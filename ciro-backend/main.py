@@ -1,7 +1,7 @@
 import os
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-# Deployment v2.5.0 - Added email-validator
+# Deployment v2.5.1 - Trigger with email-validator
 import logging
 
 # Set up logging
