@@ -28,6 +28,14 @@ jobs:
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
+      - name: Verify authentication
+        run: |
+          if [ -z "${{ secrets.GCP_SA_KEY }}" ]; then
+            echo "❌ ERROR: GCP_SA_KEY secret is not set!"
+            exit 1
+          fi
+          echo "✅ GCP_SA_KEY secret is configured"
+
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
