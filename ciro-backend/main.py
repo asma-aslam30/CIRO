@@ -1,12 +1,7 @@
 import os
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-# Deployment v2.4.0 - In-memory DB for Cloud Run
-from routers import signals, crisis, actions, auth, autopilot
-from database.state import state
-# Deployment trigger - v1.0.0
-from database.socket_manager import manager
-from database.db import init_db
+# Deployment v2.5.0 - Added email-validator
 import logging
 
 # Set up logging
@@ -17,10 +12,22 @@ app = FastAPI(title="CIRO — Startup Level Orchestrator")
 
 # Initialize database tables (creates users table if not exists)
 try:
+    from database.db import init_db
+    from database.socket_manager import manager
+    from database.state import state
+    
     init_db()
     logger.info("✅ Database initialized successfully")
 except Exception as e:
     logger.error(f"❌ Database initialization error: {e}")
+    raise
+
+# Try to import routers with error handling
+try:
+    from routers import signals, crisis, actions, auth, autopilot
+    logger.info("✅ All routers imported successfully")
+except Exception as e:
+    logger.error(f"❌ Router import error: {e}")
     raise
 
 
