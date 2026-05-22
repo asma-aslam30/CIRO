@@ -1,7 +1,7 @@
 import os
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-# Deployment v2.6.0 - CORS fix with ALLOWED_ORIGINS
+# Deployment v2.7.0 - WebSocket connection fix
 import logging
 
 # Set up logging
