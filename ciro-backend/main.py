@@ -58,7 +58,7 @@ def get_allowed_origins() -> list:
 # Allow web frontend to connect
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=get_allowed_origins(),
+    allow_origins=["*"],  # Allow all origins for demo
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
