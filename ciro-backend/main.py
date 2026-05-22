@@ -2,7 +2,7 @@ import os
 import asyncio
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-# Deployment v2.9.0 - Dynamic CORS configuration
+# Deployment v3.0.0 - CORS retry
 import logging
 
 # Set up logging
