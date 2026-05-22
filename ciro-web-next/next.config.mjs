@@ -1,5 +1,5 @@
 /** @type {import('next').NextConfig} */
-// Deployment v2.1.0
+// Deployment v2.2.0 - Fixed backend URL
 const nextConfig = {
   reactStrictMode: true,
   images: {
