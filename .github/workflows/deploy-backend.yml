@@ -83,6 +83,7 @@ jobs:
             --memory=512Mi \
             --cpu=1 \
             --timeout=3600 \
+            --set-env-vars="ALLOWED_ORIGINS=https://ciro-web-next-831760955449.us-central1.run.app" \
             --quiet
 
       - name: Print deployed URL
