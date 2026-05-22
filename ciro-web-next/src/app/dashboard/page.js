@@ -66,7 +66,18 @@ const RotateIcon = ({ className }) => (
   </svg>
 )
 
-const WS_URL = 'ws://localhost:8000/ws'
+const WS_URL = (() => {
+  if (typeof window === 'undefined') return 'ws://localhost:8000/ws'
+  
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'
+  // Convert http/https to ws/wss and remove /api suffix
+  const wsBase = apiBase
+    .replace(/^https:/, 'wss:')
+    .replace(/^http:/, 'ws:')
+    .replace(/\/api$/, '')
+  
+  return `${wsBase}/ws`
+})()
 
 export default function DashboardPage() {
   const router = useRouter()
