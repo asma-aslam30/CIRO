@@ -58,12 +58,23 @@ app.add_middleware(
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    # No complex auth for now to ensure demo works
+    # Accept the WebSocket connection first
+    try:
+        await websocket.accept()
+        logger.info(f"✅ WebSocket connected from {websocket.client}")
+    except Exception as e:
+        logger.error(f"❌ WebSocket connection failed: {e}")
+        await websocket.close(code=1000)
+        return
+    
+    # Connect to manager
     await manager.connect(websocket)
     try:
         while True:
-            await websocket.receive_text()
-    except WebSocketDisconnect:
+            data = await websocket.receive_text()
+            logger.debug(f"WebSocket received: {data}")
+    except Exception as e:
+        logger.info(f"WebSocket disconnected: {e}")
         manager.disconnect(websocket)
 
 
