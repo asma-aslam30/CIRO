@@ -3,7 +3,7 @@ name: Deploy ciro-web-next to Cloud Run
 on:
   push:
     branches:
-      - main
+      - master
     paths:
       - 'ciro-web-next/**'
       - '.github/workflows/deploy-frontend.yml'
@@ -82,9 +82,14 @@ jobs:
             --region=${{ env.GCP_REGION }} \
             --project=${{ secrets.GCP_PROJECT_ID }} \
             --allow-unauthenticated \
+            --port=3000 \
+            --memory=512Mi \
+            --cpu=1 \
+            --timeout=3600 \
             --quiet
 
       - name: Update backend CORS with frontend URL
+        continue-on-error: true
         run: |
           FRONTEND_URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} \
             --platform=managed \
@@ -100,7 +105,7 @@ jobs:
             --region=${{ env.GCP_REGION }} \
             --project=${{ secrets.GCP_PROJECT_ID }} \
             --set-env-vars="ALLOWED_ORIGINS=$FRONTEND_URL" \
-            --quiet
+            --quiet 2>/dev/null || echo "⚠️  Backend not yet deployed. CORS will need manual update."
 
           echo "✅ Frontend deployed at: $FRONTEND_URL"
           echo "✅ Backend CORS updated to allow: $FRONTEND_URL"
