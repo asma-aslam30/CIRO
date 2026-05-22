@@ -70,7 +70,6 @@ jobs:
             --cpu=1 \
             --timeout=3600 \
             --set-env-vars="PORT=8000" \
-            --set-secrets=GEMINI_API_KEY=GEMINI_API_KEY:latest \
             --quiet
 
       - name: Print deployed URL
