@@ -1,7 +1,7 @@
 import os
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-# Deployment v2.2.0 - Backend deployment
+# Deployment v2.3.0 - Fixed PORT env var
 from routers import signals, crisis, actions, auth, autopilot
 from database.state import state
 # Deployment trigger - v1.0.0
