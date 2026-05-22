@@ -1,5 +1,5 @@
 /** @type {import('next').NextConfig} */
-// Deployment v2.0.0
+// Deployment v2.1.0
 const nextConfig = {
   reactStrictMode: true,
   images: {
