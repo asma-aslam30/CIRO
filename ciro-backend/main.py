@@ -3,6 +3,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from routers import signals, crisis, actions, auth, autopilot
 from database.state import state
+# Deployment trigger - v1.0.0
 from database.socket_manager import manager
 from database.db import init_db
 
