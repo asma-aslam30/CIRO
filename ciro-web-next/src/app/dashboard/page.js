@@ -167,10 +167,12 @@ export default function DashboardPage() {
     let reconnectTimeout
 
     const connect = () => {
+      console.log('Connecting to WebSocket:', WS_URL)
       const socket = new WebSocket(WS_URL)
       wsRef.current = socket
 
       socket.onopen = () => {
+        console.log('WebSocket connected')
         setIsOnline(true)
         addAudit('KERNEL', 'Nexus uplink established. Awaiting telemetry.')
       }
@@ -216,6 +218,12 @@ export default function DashboardPage() {
         setIsOnline(false)
         addAudit('SYS_ERR', 'Nexus uplink lost. Reconnecting...')
         reconnectTimeout = setTimeout(connect, 3000)
+      }
+
+      socket.onerror = (error) => {
+        console.error('WebSocket error:', error)
+        addAudit('SYS_ERR', `WebSocket error: ${error.message || 'Unknown error'}`)
+        setIsOnline(false)
       }
     }
 
