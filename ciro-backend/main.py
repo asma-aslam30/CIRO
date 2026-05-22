@@ -7,11 +7,21 @@ from database.state import state
 # Deployment trigger - v1.0.0
 from database.socket_manager import manager
 from database.db import init_db
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="CIRO — Startup Level Orchestrator")
 
 # Initialize database tables (creates users table if not exists)
-init_db()
+try:
+    init_db()
+    logger.info("✅ Database initialized successfully")
+except Exception as e:
+    logger.error(f"❌ Database initialization error: {e}")
+    raise
 
 
 def get_allowed_origins() -> list:

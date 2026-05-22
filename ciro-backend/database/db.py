@@ -2,11 +2,18 @@ from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, 
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime
+import os
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///./ciro_startup.db"
+# Use in-memory SQLite for Cloud Run, file-based for local development
+if os.environ.get("CLOUD_RUN_ENVIRONMENT") or os.environ.get("PORT"):
+    SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
+else:
+    SQLALCHEMY_DATABASE_URL = "sqlite:///./ciro_startup.db"
 
 engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+    SQLALCHEMY_DATABASE_URL, 
+    connect_args={"check_same_thread": False},
+    echo=False
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
