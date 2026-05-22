@@ -11,13 +11,14 @@ on:
 env:
   GCP_REGION: us-central1
   SERVICE_NAME: ciro-web-next
-  IMAGE: us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/ciro-images/ciro-web-next
   BACKEND_SERVICE: ciro-backend
 
 jobs:
   deploy:
     name: Build & Deploy Frontend
     runs-on: ubuntu-latest
+    env:
+      IMAGE: us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/ciro-images/ciro-web-next
 
     steps:
       - name: Checkout code
@@ -34,7 +35,12 @@ jobs:
             echo "❌ ERROR: GCP_SA_KEY secret is not set!"
             exit 1
           fi
+          if [ -z "${{ secrets.GCP_PROJECT_ID }}" ]; then
+            echo "❌ ERROR: GCP_PROJECT_ID secret is not set!"
+            exit 1
+          fi
           echo "✅ GCP_SA_KEY secret is configured"
+          echo "✅ GCP_PROJECT_ID secret is configured"
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
